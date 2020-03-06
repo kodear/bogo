@@ -174,7 +174,7 @@ func (b *BiliBili) Name() string {
 }
 
 func (b *BiliBili) WebName() string {
-	return "哔哩哔哩视频网"
+	return "哔哩哔哩【https://www.bilibili.com/】"
 }
 
 func (b *BiliBili) Pattern() string {

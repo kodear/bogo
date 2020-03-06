@@ -217,7 +217,7 @@ func (i *Iqiyi) Parse(r string) (body Body, err error) {
 							Size:  v.Vsize,
 						},
 					},
-					DownloadProtocol: "hls_text",
+					DownloadProtocol: "hlsText",
 				})
 				break
 			}
@@ -233,7 +233,7 @@ func (i *Iqiyi) Name() string {
 }
 
 func (i *Iqiyi) WebName() string {
-	return "爱奇艺视频"
+	return "爱奇艺【https://www.iqiyi.com/】"
 }
 
 func (i *Iqiyi) Pattern() string {

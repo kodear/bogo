@@ -12,18 +12,18 @@ type HTTP struct {
 }
 
 func (h *HTTP) Do(link, text, file, fname string, links []string) {
-	h.Init = true
+	h.ProgressINIT = true
 
 	f, err := os.Create(fname)
 	if err != nil {
-		h.Err = err
+		h.DownloadMessage = err
 		return
 	}
 
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", link, nil)
 	if err != nil {
-		h.Err = err
+		h.DownloadMessage = err
 		return
 	}
 
@@ -33,7 +33,7 @@ func (h *HTTP) Do(link, text, file, fname string, links []string) {
 
 	res, err := client.Do(req)
 	if err != nil {
-		h.Err = err
+		h.DownloadMessage = err
 		return
 	}
 
@@ -46,14 +46,14 @@ func (h *HTTP) Do(link, text, file, fname string, links []string) {
 			break
 		}
 		f.Write(buf[:n])
-		if !h.C {
-			h.C = true
+		if !h.DownloadINIT {
+			h.DownloadINIT = true
 		}
 		h.Ch <- n
 	}
 	res.Body.Close()
 
-	h.Ok = true
+	h.DownloadStatus = true
 
 }
 
@@ -63,12 +63,12 @@ type HTTPSegFLV struct {
 
 func (h *HTTPSegFLV) Do(link, text, file, fname string, links []string) {
 
-	h.Init = true
+	h.ProgressINIT = true
 	flvFile, err := flv.CreateFile(fname)
 	h.Ch = make(chan int, 1000)
 
 	if err != nil {
-		h.Err = err
+		h.DownloadMessage = err
 		return
 	}
 
@@ -80,14 +80,14 @@ func (h *HTTPSegFLV) Do(link, text, file, fname string, links []string) {
 
 		f, err := os.Create(fname + ".tmp")
 		if err != nil {
-			h.Err = err
+			h.DownloadMessage = err
 			return
 		}
 
 		client := &http.Client{}
 		req, err := http.NewRequest("GET", l, nil)
 		if err != nil {
-			h.Err = err
+			h.DownloadMessage = err
 			return
 		}
 
@@ -97,7 +97,7 @@ func (h *HTTPSegFLV) Do(link, text, file, fname string, links []string) {
 
 		res, err := client.Do(req)
 		if err != nil {
-			h.Err = err
+			h.DownloadMessage = err
 			return
 		}
 
@@ -109,13 +109,13 @@ func (h *HTTPSegFLV) Do(link, text, file, fname string, links []string) {
 				break
 			}
 			if err != nil {
-				h.Err = err
+				h.DownloadMessage = err
 				return
 			}
 
 			f.Write(buf[:n])
-			if !h.C {
-				h.C = true
+			if !h.DownloadINIT {
+				h.DownloadINIT = true
 			}
 			h.Ch <- n
 		}
@@ -124,7 +124,7 @@ func (h *HTTPSegFLV) Do(link, text, file, fname string, links []string) {
 		// ==========================================================================================================
 		fi, err := flv.OpenFile(fname + ".tmp")
 		if err != nil {
-			h.Err = err
+			h.DownloadMessage = err
 			return
 		}
 
@@ -155,6 +155,6 @@ func (h *HTTPSegFLV) Do(link, text, file, fname string, links []string) {
 		err = os.Remove(fname + ".tmp")
 	}
 
-	h.Ok = true
+	h.DownloadStatus = true
 
 }

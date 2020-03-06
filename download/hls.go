@@ -98,13 +98,13 @@ func (h *HLS) Parse(link, text, file string) (urls []string, err error) {
 func (h *HLS) Do(link, text, file, fname string, links []string) {
 	urls, err := h.Parse(link, text, file)
 	if err != nil {
-		h.Err = err
+		h.DownloadMessage = err
 		return
 	}
 
 	out, err := os.Create(fname)
 	if err != nil {
-		h.Err = err
+		h.DownloadMessage = err
 		return
 	}
 
@@ -116,25 +116,25 @@ func (h *HLS) Do(link, text, file, fname string, links []string) {
 		ok = true
 	}
 
-	h.Init = true
+	h.ProgressINIT = true
 
 	h.Ch = make(chan int, 1000)
 	for _, link := range urls {
 		client := &http.Client{}
 		res, err := client.Get(link)
 		if err != nil {
-			h.Err = err
+			h.DownloadMessage = err
 			return
 		}
 
 		_, err = io.Copy(out, res.Body)
 		if err != nil {
-			h.Err = err
+			h.DownloadMessage = err
 			return
 		}
 
-		if !h.C {
-			h.C = true
+		if !h.DownloadINIT {
+			h.DownloadINIT = true
 		}
 
 		if ok {
@@ -146,5 +146,5 @@ func (h *HLS) Do(link, text, file, fname string, links []string) {
 		res.Body.Close()
 	}
 
-	h.Ok = true
+	h.DownloadStatus = true
 }

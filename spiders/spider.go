@@ -21,10 +21,11 @@ type Spider interface {
 	Pattern() string
 	SetCookies(string)
 	Name() string
+	WebName() string
 }
 
 var spiders = []Spider{
-	&Acfun{}, &AcfunBangumi{}, &YouKu{}, &BiliBili{}, &BiliBiliBangumi{}, &Iqiyi{}, &Tencent{},
+	&Acfun{}, &AcfunBangumi{}, &BiliBili{}, &BiliBiliBangumi{}, &Iqiyi{}, &Tencent{}, &YouKu{},
 }
 
 type SpiderObject struct {
@@ -227,6 +228,13 @@ func ShowVideo(r string, cookies map[string]string) {
 		tabulate := gotabulate.Create(p)
 		tabulate.SetHeaders([]string{"ID", "Title", "Part", "Format", "StreamType", "Quality", "Width", "Height", "Duration", "Size", "DownloadProtocol"})
 		fmt.Println(tabulate.Render("simple"))
+	}
+}
+
+func ShowWeb() {
+	fmt.Println()
+	for _, s := range spiders {
+		fmt.Println(s.WebName())
 	}
 }
 

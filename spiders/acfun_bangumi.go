@@ -76,7 +76,7 @@ func (a *AcfunBangumi) Name() string {
 }
 
 func (a *AcfunBangumi) WebName() string {
-	return "Acfun弹幕视频网"
+	return "Acfun番剧【https://www.acfun.cn/v/list155/index.htm】"
 }
 
 func (a *AcfunBangumi) Pattern() string {

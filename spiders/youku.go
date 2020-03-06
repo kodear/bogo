@@ -119,7 +119,7 @@ func (y *YouKu) Name() string {
 }
 
 func (y *YouKu) WebName() string {
-	return "优酷视频"
+	return "优酷【https://www.youku.com/】"
 }
 
 func (y *YouKu) Pattern() string {

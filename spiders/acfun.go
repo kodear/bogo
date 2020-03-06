@@ -94,7 +94,7 @@ func (a *Acfun) Name() string {
 }
 
 func (a *Acfun) WebName() string {
-	return "Acfun弹幕视频网"
+	return "Acfun【https://www.acfun.cn/】"
 }
 
 func (a *Acfun) Pattern() string {

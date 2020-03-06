@@ -4,15 +4,15 @@ import (
 	"flag"
 	"fmt"
 	"github.com/zhxingy/bogo/download"
-
-	//"fmt"
-	//"github.com/zhxingy/bogo/download"
 	"github.com/zhxingy/bogo/spiders"
-	//"gopkg.in/cheggaaa/pb.v1"
+	"gopkg.in/cheggaaa/pb.v1"
 	"os"
-	//"path"
-	//"time"
+	"os/user"
+	"path"
+	"time"
 )
+
+const Version = 0.01
 
 var Cookies = map[string]string{
 	"bilibili": "SESSDATA=9371411d%2C1585468536%2C0e682721",
@@ -22,35 +22,184 @@ var Cookies = map[string]string{
 }
 
 var (
-	showTable bool
-	link      string
-	clarity   string
-	id        int
+	videoShow         bool
+	videoURL          string
+	videoQuality      string
+	videoID           int
+	videoDownloadFile string
+	downloadHost      string
+	downloadText      string
+	downloadUrl       string
+	downloadUrls      []string
+	configPath        = ".config\\bogo"
+	configName        = "bogo.ini"
+	downloadPath      = "BogoDownloads"
+	showWeb           bool
+	version           bool
 )
 
 func init() {
-	flag.BoolVar(&showTable, "l", false, "output all video information and exit")
-	flag.StringVar(&link, "i", "", "url that needs to be parsed")
-	flag.StringVar(&clarity, "c", "", "select the quality of the downloaded video")
-	flag.IntVar(&id, "f", 0, "download the video by number")
+	flag.BoolVar(&videoShow, "l", false, "output all video information and exit")
+	flag.StringVar(&videoURL, "i", "", "url that needs to be parsed")
+	flag.StringVar(&videoQuality, "q", "", "select the quality of the downloaded video")
+	flag.IntVar(&videoID, "f", 0, "download the video by number")
+	flag.StringVar(&videoDownloadFile, "o", "", "set download file save name")
+	flag.StringVar(&downloadHost, "set-download-path", "", "set download file save path")
+	flag.BoolVar(&showWeb, "s", false, "list supported parsing sites and log out")
+	flag.BoolVar(&version, "v", false, "print the software version and exit")
 }
 
+func ConfigName() string {
+	username, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+
+	configPath := username.HomeDir + "\\" + configPath
+	_, err = os.Stat(configPath)
+	if err != nil && os.IsNotExist(err) {
+		err := os.MkdirAll(configPath, 0644)
+		if err != nil {
+			panic(err)
+		}
+	}
+	configFile := configPath + "\\" + configName
+	return configFile
+}
+
+func DownloadPath() string {
+	username, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+
+	downloadRoot := username.HomeDir + "\\" + downloadPath
+	_, err = os.Stat(downloadRoot)
+	if err != nil && os.IsNotExist(err) {
+		err := os.MkdirAll(downloadRoot, 0644)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return downloadRoot
+
+}
 func main() {
 	flag.Parse()
-	if link == "" {
-		flag.Usage()
-	} else if showTable {
-		spiders.ShowVideo(link, Cookies)
-	} else {
-		video, err := spiders.Do(link, clarity, id, Cookies)
-		if err != nil {
-			fmt.Println(err)
-		} else {
-			var d download.Downloader
-			if video.DownloadProtocol == "hls" {
 
-			}
+	// 加载配置文件
+	configFile := ConfigName()
+	downloadRoot := DownloadPath()
+	cfg := NewConfig(configFile, downloadRoot, Cookies)
+	cfg.Read()
+
+	if downloadHost != cfg.root && downloadHost != "" {
+		cfg.root = downloadHost
+		cfg.Write()
+		os.Exit(0)
+	}
+
+	if version {
+		fmt.Printf("Bogo Version: %v\n", Version)
+		os.Exit(0)
+	}
+
+	if showWeb {
+		spiders.ShowWeb()
+		os.Exit(0)
+	}
+
+	if videoURL == "" {
+		flag.Usage()
+	} else if videoShow {
+		spiders.ShowVideo(videoURL, Cookies)
+		os.Exit(0)
+
+	}
+
+	// 解析错误
+	cookies := make(map[string]string)
+	for k, v := range cfg.cookies {
+		cookies[k] = v
+	}
+
+	video, err := spiders.Do(videoURL, videoQuality, videoID, Cookies)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(2)
+	}
+
+	// 初始化下载器错误
+	downloader, err := download.LoadDownloader(video.DownloadProtocol)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(2)
+	}
+
+	if video.DownloadProtocol == "hls" || video.DownloadProtocol == "http" {
+		downloadUrl = video.Links[0].URL
+	} else if video.DownloadProtocol == "hlsText" {
+		downloadText = video.Links[0].URL
+	} else if video.DownloadProtocol == "httpSegFlv" {
+		for _, v := range video.Links {
+			downloadUrls = append(downloadUrls, v.URL)
 		}
+	} else {
+		fmt.Println("did not match to downloader")
+		os.Exit(3)
+	}
+
+	if videoDownloadFile == "" {
+		if video.Part != "" {
+			video.Part = "-" + video.Part
+		}
+		videoDownloadFile = video.Title + video.Part + "." + video.Format
+	}
+	DownloadFile := path.Join(cfg.root, videoDownloadFile)
+
+	downloader.SetHeaders(video.DownloadHeaders)
+	downloader.SetMax(video.Size)
+	go downloader.Do(downloadUrl, downloadText, "", DownloadFile, downloadUrls)
+
+	go func() {
+		for {
+			if downloader.Status() || downloader.Error() != nil {
+				close(downloader.Chan())
+				break
+			}
+			time.Sleep(1000)
+		}
+	}()
+
+	// 等待获取进度条最大值
+	for !downloader.Progress() {
+		time.Sleep(1000)
+	}
+
+	bar := pb.New(downloader.Max()).SetRefreshRate(time.Millisecond * 10)
+	if video.Size != 0 {
+		bar.SetUnits(pb.U_BYTES_DEC)
+	}
+	bar.ShowSpeed = true
+	bar.ShowTimeLeft = true
+	bar.ShowFinalTime = true
+	bar.SetMaxWidth(200)
+	bar.Prefix("Download: [" + path.Base(videoDownloadFile) + "]")
+	bar.Start()
+
+	//
+	for !downloader.INIT() {
+		time.Sleep(1000)
+	}
+
+	for p := range downloader.Chan() {
+		bar.Add(p)
+	}
+	bar.Finish()
+
+	if !downloader.Status() {
+		fmt.Printf("download failed: %v\n", downloader.Error())
 	}
 
 }

@@ -250,7 +250,7 @@ func (t *Tencent) Name() string {
 }
 
 func (t *Tencent) WebName() string {
-	return "腾讯视频"
+	return "腾讯视频【https://v.qq.com/】"
 }
 
 func (t *Tencent) Pattern() string {

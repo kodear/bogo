@@ -144,7 +144,7 @@ func (b *BiliBiliBangumi) Name() string {
 }
 
 func (b *BiliBiliBangumi) WebName() string {
-	return "哔哩哔哩视频网"
+	return "哔哩哔哩番剧【https://www.bilibili.com/anime/】"
 }
 
 func (b *BiliBiliBangumi) Pattern() string {

@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const Version = 0.01
+const Version = "0.0.2"
 
 var Cookies = map[string]string{
 	"bilibili": "SESSDATA=9371411d%2C1585468536%2C0e682721",
@@ -31,7 +31,7 @@ var (
 	downloadText      string
 	downloadUrl       string
 	downloadUrls      []string
-	configPath        = ".config\\bogo"
+	configPath        = "bogo"
 	configName        = "bogo.ini"
 	downloadPath      = "BogoDownloads"
 	showWeb           bool
@@ -55,7 +55,7 @@ func ConfigName() string {
 		panic(err)
 	}
 
-	configPath := username.HomeDir + "\\" + configPath
+	configPath := path.Join(username.HomeDir, ".config", configPath)
 	_, err = os.Stat(configPath)
 	if err != nil && os.IsNotExist(err) {
 		err := os.MkdirAll(configPath, 0644)
@@ -63,7 +63,7 @@ func ConfigName() string {
 			panic(err)
 		}
 	}
-	configFile := configPath + "\\" + configName
+	configFile := path.Join(configPath, configName)
 	return configFile
 }
 
@@ -73,7 +73,7 @@ func DownloadPath() string {
 		panic(err)
 	}
 
-	downloadRoot := username.HomeDir + "\\" + downloadPath
+	downloadRoot := path.Join(username.HomeDir, downloadPath)
 	_, err = os.Stat(downloadRoot)
 	if err != nil && os.IsNotExist(err) {
 		err := os.MkdirAll(downloadRoot, 0644)
@@ -165,7 +165,13 @@ func main() {
 	go func() {
 		for {
 			if downloader.Status() || downloader.Error() != nil {
-				close(downloader.Chan())
+				if downloader.Chan() != nil {
+					close(downloader.Chan())
+				} else {
+					fmt.Println("close of nil channel")
+					os.Exit(5)
+				}
+
 				break
 			}
 			time.Sleep(1000)
@@ -201,5 +207,4 @@ func main() {
 	if !downloader.Status() {
 		fmt.Printf("download failed: %v\n", downloader.Error())
 	}
-
 }

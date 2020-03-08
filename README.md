@@ -54,7 +54,7 @@ Usage of bogo:
 ```
 // 默认保存目录为 $HOME/BogoDownloads
 // bogo --set-download-path $HOME/BogoDownloads
-bogo --set-download-path /home/data/video
+$ bogo --set-download-path /home/data/video
 ```
 
 #### 查看支持解析网站

@@ -115,18 +115,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	if videoShow {
-		spiders.ShowVideo(videoURL, Cookies)
-		os.Exit(0)
-	}
-
-	// 解析错误
 	cookies := make(map[string]string)
 	for k, v := range cfg.cookies {
 		cookies[k] = v
 	}
 
-	video, err := spiders.Do(videoURL, videoQuality, videoID, Cookies)
+	if videoShow {
+		spiders.ShowVideo(videoURL, cookies)
+		os.Exit(0)
+	}
+
+	video, err := spiders.Do(videoURL, videoQuality, videoID, cookies)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(2)

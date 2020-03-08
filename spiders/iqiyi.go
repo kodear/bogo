@@ -204,7 +204,7 @@ func (i *Iqiyi) Parse(r string) (body Body, err error) {
 					ID:       v.Bid,
 					Title:    title,
 					Part:     v.Name,
-					Format:   v.Ff,
+					Format:   "mp4",
 					Size:     v.Vsize,
 					Duration: v.Duration,
 					Width:    w,

@@ -1,7 +1,7 @@
 package download
 
 import (
-	"github.com/pkg/errors"
+	"errors"
 )
 
 type Downloader interface {

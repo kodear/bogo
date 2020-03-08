@@ -112,10 +112,12 @@ func main() {
 
 	if videoURL == "" {
 		flag.Usage()
-	} else if videoShow {
+		os.Exit(1)
+	}
+
+	if videoShow {
 		spiders.ShowVideo(videoURL, Cookies)
 		os.Exit(0)
-
 	}
 
 	// 解析错误

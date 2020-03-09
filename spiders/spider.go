@@ -25,7 +25,7 @@ type Spider interface {
 }
 
 var spiders = []Spider{
-	&Acfun{}, &AcfunBangumi{}, &BiliBili{}, &BiliBiliBangumi{}, &Iqiyi{}, &Tencent{}, &YouKu{},
+	&Acfun{}, &AcfunBangumi{}, &BiliBili{}, &BiliBiliBangumi{}, &Iqiyi{}, &Tencent{}, &YouKu{}, &RiJuTv{},
 }
 
 type SpiderObject struct {

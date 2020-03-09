@@ -1,7 +1,7 @@
 package download
 
 import (
-	flv "github.com/zhangpeihao/goflv"
+	"github.com/zhangpeihao/goflv"
 	"io"
 	"net/http"
 	"os"
@@ -42,16 +42,16 @@ func (h *HTTP) Do(link, text, file, fname string, links []string) {
 	for {
 		n, err := res.Body.Read(buf)
 		if err != nil {
-			f.Close()
+			_ = f.Close()
 			break
 		}
-		f.Write(buf[:n])
+		_, _ = f.Write(buf[:n])
 		if !h.DownloadINIT {
 			h.DownloadINIT = true
 		}
 		h.Ch <- n
 	}
-	res.Body.Close()
+	_ = res.Body.Close()
 
 	h.DownloadStatus = true
 
@@ -105,7 +105,7 @@ func (h *HTTPSegFLV) Do(link, text, file, fname string, links []string) {
 		for {
 			n, err := res.Body.Read(buf)
 			if err != nil && err == io.EOF {
-				f.Close()
+				_ = f.Close()
 				break
 			}
 			if err != nil {
@@ -113,13 +113,13 @@ func (h *HTTPSegFLV) Do(link, text, file, fname string, links []string) {
 				return
 			}
 
-			f.Write(buf[:n])
+			_, _ = f.Write(buf[:n])
 			if !h.DownloadINIT {
 				h.DownloadINIT = true
 			}
 			h.Ch <- n
 		}
-		res.Body.Close()
+		_ = res.Body.Close()
 
 		// ==========================================================================================================
 		fi, err := flv.OpenFile(fname + ".tmp")

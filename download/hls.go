@@ -64,7 +64,7 @@ func (h *HLS) Parse(link, text, file string) (urls []string, err error) {
 			newLink = u.Scheme + "://" + u.Host + "/" + newLink
 		} else {
 			s := strings.Split(link, "/")
-			urls = append(urls, strings.Join(s[0:len(s)-1], "/")+"/"+newLink)
+			newLink = strings.Join(s[0:len(s)-1], "/") + "/" + newLink
 		}
 
 		return h.Parse(newLink, "", "")
@@ -143,7 +143,7 @@ func (h *HLS) Do(link, text, file, fname string, links []string) {
 			h.Ch <- int(res.ContentLength)
 		}
 
-		res.Body.Close()
+		_ = res.Body.Close()
 	}
 
 	h.DownloadStatus = true

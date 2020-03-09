@@ -9,10 +9,14 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"path/filepath"
+	"regexp"
+	"runtime"
+	"strings"
 	"time"
 )
 
-const Version = "0.0.2"
+const Version = "0.0.3"
 
 var Cookies = map[string]string{
 	"bilibili": "SESSDATA=9371411d%2C1585468536%2C0e682721",
@@ -55,7 +59,7 @@ func ConfigName() string {
 		panic(err)
 	}
 
-	configPath := path.Join(username.HomeDir, ".config", configPath)
+	configPath := filepath.Join(username.HomeDir, ".config", configPath)
 	_, err = os.Stat(configPath)
 	if err != nil && os.IsNotExist(err) {
 		err := os.MkdirAll(configPath, 0644)
@@ -63,7 +67,7 @@ func ConfigName() string {
 			panic(err)
 		}
 	}
-	configFile := path.Join(configPath, configName)
+	configFile := filepath.Join(configPath, configName)
 	return configFile
 }
 
@@ -73,7 +77,7 @@ func DownloadPath() string {
 		panic(err)
 	}
 
-	downloadRoot := path.Join(username.HomeDir, downloadPath)
+	downloadRoot := filepath.Join(username.HomeDir, downloadPath)
 	_, err = os.Stat(downloadRoot)
 	if err != nil && os.IsNotExist(err) {
 		err := os.MkdirAll(downloadRoot, 0644)
@@ -152,12 +156,25 @@ func main() {
 	}
 
 	if videoDownloadFile == "" {
-		if video.Part != "" {
+		if video.Title == video.Part {
+			video.Part = ""
+		} else if video.Part != "" {
 			video.Part = "-" + video.Part
 		}
 		videoDownloadFile = video.Title + video.Part + "." + video.Format
+
+		// The system cannot find the path specified.
+		// C:\Users\Administrator\Desktop\千年女子最强音《华夏巾帼志》【茶理理/小缘/肥皂菌/三畿道】.flv
+		// windows 文件名中不能包含 \  /  :  *  ?  "  <  >  |
+		if runtime.GOOS == "windows" {
+			re := regexp.MustCompile(`\/|\\|\:|\*|\?|\"|\<|\>|\|`)
+			videoDownloadFile = re.ReplaceAllString(videoDownloadFile, "、")
+		} else {
+			videoDownloadFile = strings.Replace(videoDownloadFile, `/`, `\/`, -1)
+		}
 	}
-	DownloadFile := path.Join(cfg.root, videoDownloadFile)
+
+	DownloadFile := filepath.Join(cfg.root, videoDownloadFile)
 
 	downloader.SetHeaders(video.DownloadHeaders)
 	downloader.SetMax(video.Size)
@@ -166,6 +183,10 @@ func main() {
 	go func() {
 		for {
 			if downloader.Status() || downloader.Error() != nil {
+				if downloader.Error() != nil {
+					fmt.Println(downloader.Error())
+					os.Exit(5)
+				}
 				if downloader.Chan() != nil {
 					close(downloader.Chan())
 				} else {
@@ -204,8 +225,4 @@ func main() {
 		bar.Add(p)
 	}
 	bar.Finish()
-
-	if !downloader.Status() {
-		fmt.Printf("download failed: %v\n", downloader.Error())
-	}
 }

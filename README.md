@@ -8,6 +8,7 @@
 * [爱奇艺](https://www.iqiyi.com/)
 * [优酷](https://www.youku.com/)
 * [腾讯视频](https://v.qq.com/)
+* [日剧TV](https://www.rijutv.com/)
 
 ### 下载地址
 * [bogo-v0.0.2-windows-x64.zip](http://pkg.maoq.pw/pkg/bogo/bogo-v0.0.2-windows-x64.zip)

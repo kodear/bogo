@@ -11,8 +11,8 @@
 * [日剧TV](https://www.rijutv.com/)
 
 ### 下载地址
-* [bogo-v0.0.2-windows-x64.zip](http://pkg.maoq.pw/pkg/bogo/bogo-v0.0.2-windows-x64.zip)
-* [bogo-v0.0.2-linux-amd64.zip](http://pkg.maoq.pw/pkg/bogo/bogo-v0.0.2-linux-amd64.zip)
+* [bogo-v0.0.2-windows-x64.zip](http://pkg.maoq.pw/pkg/bogo/bogo-v0.0.3-windows-x64.zip)
+* [bogo-v0.0.2-linux-amd64.zip](http://pkg.maoq.pw/pkg/bogo/bogo-v0.0.3-linux-amd64.zip)
 
 ### 安装
 * windows操作系统

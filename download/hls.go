@@ -20,7 +20,13 @@ func (h *HLS) Parse(link, text, file string) (urls []string, err error) {
 
 	if link != "" {
 		client := http.Client{}
-		res, err := client.Get(link)
+		req, _ := http.NewRequest("GET", link, nil)
+
+		for k, v := range h.Headers {
+			req.Header.Add(k, v)
+		}
+
+		res, err := client.Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -121,7 +127,13 @@ func (h *HLS) Do(link, text, file, fname string, links []string) {
 	h.Ch = make(chan int, 1000)
 	for _, link := range urls {
 		client := &http.Client{}
-		res, err := client.Get(link)
+		req, _ := http.NewRequest("GET", link, nil)
+
+		for k, v := range h.Headers {
+			req.Header.Add(k, v)
+		}
+
+		res, err := client.Do(req)
 		if err != nil {
 			h.DownloadMessage = err
 			return

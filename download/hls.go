@@ -101,20 +101,22 @@ func (h *HLS) Parse(link, text, file string) (urls []string, err error) {
 	return
 }
 
-func (h *HLS) Do(link, text, file, fname string, links []string) {
+func (h *HLS) Do(link, text, file, filename string, links []string) {
 	urls, err := h.Parse(link, text, file)
 	if err != nil {
 		h.DownloadMessage = err
 		return
 	}
 
-	out, err := os.Create(fname)
+	out, err := os.Create(filename)
 	if err != nil {
 		h.DownloadMessage = err
 		return
 	}
 
-	defer out.Close()
+	defer func() {
+		_ = out.Close()
+	}()
 
 	var ok bool
 	if h.Len == 0 {
@@ -129,22 +131,26 @@ func (h *HLS) Do(link, text, file, fname string, links []string) {
 		client := &http.Client{}
 		req, _ := http.NewRequest("GET", link, nil)
 
+		// 添加headers
 		for k, v := range h.Headers {
 			req.Header.Add(k, v)
 		}
 
+		// 发送请求
 		res, err := client.Do(req)
 		if err != nil {
 			h.DownloadMessage = err
 			return
 		}
 
+		// 写文件
 		_, err = io.Copy(out, res.Body)
 		if err != nil {
 			h.DownloadMessage = err
 			return
 		}
 
+		// 下载初始化标志
 		if !h.DownloadINIT {
 			h.DownloadINIT = true
 		}
@@ -155,8 +161,10 @@ func (h *HLS) Do(link, text, file, fname string, links []string) {
 			h.Ch <- int(res.ContentLength)
 		}
 
+		// 关闭缓冲区
 		_ = res.Body.Close()
 	}
 
+	// 下载完成
 	h.DownloadStatus = true
 }

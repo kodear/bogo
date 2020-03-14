@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"net/url"
+	url2 "net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -23,8 +23,8 @@ var mgtvQuality = map[int]string{
 	4: "1080P",
 }
 
-type Mgtv struct {
-	SpiderObject
+type MgtvIE struct {
+	Spider
 }
 
 type mgtvAuthResponse struct {
@@ -64,9 +64,9 @@ type mgtvURL struct {
 	Status string `json:"status"`
 }
 
-func (tv *Mgtv) Parse(r string) (body Body, err error) {
+func (tv *MgtvIE) Parse(url string) (body []Response, err error) {
 	re := regexp.MustCompile(tv.Pattern())
-	match := re.FindAllStringSubmatch(r, -1)
+	match := re.FindAllStringSubmatch(url, -1)
 	if len(match) < 1 || len(match[0]) < 2 {
 		err = errors.New("parse url vid error")
 		return
@@ -74,16 +74,19 @@ func (tv *Mgtv) Parse(r string) (body Body, err error) {
 
 	vid := match[0][1]
 	var authBody mgtvAuthResponse
-	err = tv.DownloadJson("GET", mgtvAuthApi, url.Values{
+	resposne, err := tv.DownloadWebPage(mgtvAuthApi, url2.Values{
 		"tk2":      []string{sign()},
 		"video_id": []string{vid},
-	}, nil, map[string]string{"Referer": r, "User-agent": UserAgent}, &authBody)
+	}, map[string]string{"Referer": url, "User-agent": UserAgent})
 
 	if err != nil {
 		return
 	}
 
-	if authBody.Code != 200 {
+	err = resposne.Json(&authBody)
+	if err != nil {
+		return
+	} else if authBody.Code != 200 {
 		err = errors.New(authBody.Msg)
 		return
 	}
@@ -94,20 +97,23 @@ func (tv *Mgtv) Parse(r string) (body Body, err error) {
 		return
 	}
 
-	var mgtvBody mgtvResponse
-	err = tv.DownloadJson("GET", mgtvApi, url.Values{
+	resposne, err = tv.DownloadWebPage(mgtvApi, url2.Values{
 		"_support": []string{"10000000"},
 		"tk2":      []string{sign()},
 		"video_id": []string{vid},
 		"type":     []string{"pch5"},
 		"pm2":      []string{pm},
-	}, nil, map[string]string{"Referer": r, "User-agent": UserAgent}, &mgtvBody)
+	}, map[string]string{"Referer": url, "User-agent": UserAgent})
 
 	if err != nil {
 		return
 	}
 
-	if mgtvBody.Code != 200 {
+	var mgtvBody mgtvResponse
+	err = resposne.Json(&mgtvBody)
+	if err != nil {
+		return
+	} else if mgtvBody.Code != 200 {
 		err = errors.New(mgtvBody.Msg)
 		return
 	}
@@ -118,7 +124,12 @@ func (tv *Mgtv) Parse(r string) (body Body, err error) {
 		}
 
 		var URL mgtvURL
-		err = tv.DownloadJson("GET", mgtvBody.Data.StreamDomain[0]+x.URL, url.Values{}, nil, map[string]string{}, &URL)
+		resposne, err = tv.DownloadWebPage(mgtvBody.Data.StreamDomain[0]+x.URL, url2.Values{}, map[string]string{})
+		if err != nil {
+			return
+		}
+
+		err = resposne.Json(&URL)
 		if err != nil || URL.Status != "ok" {
 			return
 		}
@@ -127,7 +138,7 @@ func (tv *Mgtv) Parse(r string) (body Body, err error) {
 		duration, _ := strconv.Atoi(authBody.Data.Info.Duration)
 		quality := mgtvQuality[id]
 
-		body.VideoList = append(body.VideoList, &VideoBody{
+		body = append(body, Response{
 			ID:         id,
 			Title:      authBody.Data.Info.Title,
 			Part:       authBody.Data.Info.Series,
@@ -135,28 +146,31 @@ func (tv *Mgtv) Parse(r string) (body Body, err error) {
 			Duration:   duration,
 			StreamType: x.FileFormat,
 			Quality:    quality,
-			Links: []VideoAttr{
+			Links: []URLAttr{
 				{
 					URL: URL.Info,
 				},
 			},
-			DownloadHeaders:  map[string]string{"Referer": r},
+			DownloadHeaders:  map[string]string{"Referer": url},
 			DownloadProtocol: "hls",
 		})
 	}
-
 	return
 }
 
-func (tv *Mgtv) Name() string {
+func (tv *MgtvIE) CookieName() string {
 	return "mgtv"
 }
 
-func (tv *Mgtv) WebName() string {
-	return "芒果TV【https://www.mgtv.com/tv/】"
+func (tv *MgtvIE) Name() string {
+	return "芒果TV"
 }
 
-func (tv *Mgtv) Pattern() string {
+func (tv *MgtvIE) Domain() string {
+	return "https://www.mgtv.com/tv/"
+}
+
+func (tv *MgtvIE) Pattern() string {
 	//    https://www.mgtv.com/b/332228/6589904.html?fpa=55&fpos=2
 	//    https://www.mgtv.com/b/304167/3971620.html
 	//    https://www.mgtv.com/l/99999286/6607635.html?fpa=1173&fpos=2

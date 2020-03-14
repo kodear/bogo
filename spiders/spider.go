@@ -7,7 +7,7 @@ import (
 	"github.com/bndr/gotabulate"
 	"io/ioutil"
 	"net/http"
-	"net/url"
+	url2 "net/url"
 	"regexp"
 	"sort"
 	"strconv"
@@ -16,42 +16,66 @@ import (
 
 const UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"
 
-type Spider interface {
-	Parse(string) (Body, error)
-	Pattern() string
+var spiders = []Spiders{
+	&AcfunIE{},
+	&AcfunBangumiIE{},
+	&BiliBiliIE{},
+	&BiliBiliBangumiIE{},
+	&IqiyiIE{},
+	&TencentIE{},
+	&MgtvIE{},
+	&YouKuIE{},
+	&RiJuTvIE{},
+}
+
+type Spiders interface {
+	Parse(string) ([]Response, error)
 	SetCookies(string)
+	Pattern() string
+	CookieName() string
 	Name() string
-	WebName() string
 }
 
-var spiders = []Spider{
-	&Acfun{}, &AcfunBangumi{}, &BiliBili{}, &BiliBiliBangumi{}, &Iqiyi{}, &Tencent{}, &YouKu{}, &RiJuTv{}, &Mgtv{},
+type Response struct {
+	ID               int    //视频ID
+	Title            string //视频名称
+	Part             string //视频集数
+	Format           string //视频格式
+	Size             int    //视频大小
+	Duration         int    //视频长度
+	Width            int    //视频宽
+	Height           int    //视频高
+	StreamType       string //视频类型
+	Quality          string // 视频质量
+	Links            []URLAttr
+	DownloadHeaders  map[string]string // 下载视频需要的请求头
+	DownloadProtocol string            //视频下载协议
 }
 
-type SpiderObject struct {
+type URLAttr struct {
+	URL   string //碎片下载地址
+	Order int    //碎片视频排序
+	Size  int    // 碎片视频大小
+}
+
+type Spider struct {
 	Cookies      map[string]string
 	CookieString string
 }
 
-func HasMatch(r, pattern string) bool {
-	match, err := regexp.MatchString(pattern, r)
-	if err != nil {
-		return false
-	} else {
-		return match
-	}
-}
+func (tv *Spider) Request(method, url string, params url2.Values, data []byte, headers map[string]string) (bytes []byte, err error) {
 
-func (s *SpiderObject) Request(method, r string, params url.Values, data []byte, headers map[string]string) (bytes []byte, err error) {
 	client := &http.Client{}
+
 	var req *http.Request
+
 	if method == "GET" || method == "" {
-		if !strings.HasSuffix(r, "?") && len(params) != 0 {
-			r += "?"
+		if !strings.HasSuffix(url, "?") && len(params) != 0 {
+			url += "?"
 		}
-		req, err = http.NewRequest("GET", r+params.Encode(), nil)
+		req, err = http.NewRequest("GET", url+params.Encode(), nil)
 	} else if method == "POST" {
-		req, err = http.NewRequest("POST", r, strings.NewReader(string(data)))
+		req, err = http.NewRequest("POST", url, strings.NewReader(string(data)))
 	}
 
 	if err != nil {
@@ -60,19 +84,13 @@ func (s *SpiderObject) Request(method, r string, params url.Values, data []byte,
 
 	// 设置Headers
 	req.Header.Set("User-Agent", UserAgent)
-	//if method == "POST" {
-	//	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	//}
 
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
 
 	// 设置Cookies
-	//for key, value := range s.Cookies {
-	//	req.AddCookie(&http.Cookie{Name: key, Value: value})
-	//}
-	req.Header.Set("Cookie", s.CookieString)
+	req.Header.Set("Cookie", tv.CookieString)
 
 	// 发送请求
 	res, err := client.Do(req)
@@ -86,74 +104,69 @@ func (s *SpiderObject) Request(method, r string, params url.Values, data []byte,
 	}
 
 	bytes, err = ioutil.ReadAll(res.Body)
+	if err == nil {
+		_ = res.Body.Close()
+	}
 
 	return
 }
 
-func (s *SpiderObject) DownloadWeb(r string, params url.Values, headers map[string]string) (bytes []byte, err error) {
-	return s.Request("GET", r, params, nil, headers)
-}
-
-func (s *SpiderObject) DownloadJson(method, r string, params url.Values, data []byte, headers map[string]string, d interface{}) (err error) {
-	bytes, err := s.Request(method, r, params, data, headers)
+// 下载网页
+func (tv *Spider) DownloadWebPage(url string, params url2.Values, headers map[string]string) (parse *Parse, err error) {
+	bytes, err := tv.Request("GET", url, params, nil, headers)
 	if err != nil {
 		return
 	}
-	err = json.Unmarshal(bytes, d)
+
+	parse = NewParse(bytes)
 	return
 }
 
-func (s *SpiderObject) SetCookies(cookies string) {
-	s.CookieString = cookies
-	s.Cookies = SplitCookies(cookies)
+func (tv *Spider) SetCookies(cookies string) {
+	tv.CookieString = cookies
+	tv.Cookies = splitCookies(cookies)
 }
 
-func (s *SpiderObject) AddCookies(key, value string) {
-	s.CookieString += key + "=" + value + ";"
-	s.Cookies["key"] = value
+type Parse struct {
+	Bytes  []byte
+	String string
 }
 
-type Body struct {
-	Code      int   //返回值
-	Msg       error //返回错误信息
-	VideoList []*VideoBody
+func NewParse(b []byte) *Parse {
+	return &Parse{
+		Bytes:  b,
+		String: string(b),
+	}
 }
 
-type VideoBody struct {
-	ID               int    //视频ID
-	Title            string //视频名称
-	Part             string //视频集数
-	Format           string //视频格式
-	Size             int    //视频大小
-	Duration         int    //视频长度
-	Width            int    //视频宽
-	Height           int    //视频高
-	StreamType       string //视频类型
-	Quality          string // 视频质量
-	Links            []VideoAttr
-	DownloadHeaders  map[string]string // 下载视频需要的请求头
-	DownloadProtocol string            //视频下载协议
+func (p *Parse) Json(data interface{}) (err error) {
+	err = json.Unmarshal(p.Bytes, &data)
+	return
 }
 
-type VideoAttr struct {
-	URL   string //碎片下载地址
-	Order int    //碎片视频排序
-	Size  int    // 碎片视频大小
+func (p *Parse) Search(pattern string) (strings [][]string, err error) {
+	regex, err := regexp.Compile(pattern)
+	if err != nil {
+		return
+	}
+
+	strings = regex.FindAllStringSubmatch(p.String, -1)
+	return
 }
 
-func do(r string, cookies map[string]string) (body Body, err error) {
+func do(r string, cookies map[string]string) (body []Response, err error) {
 	for _, p := range spiders {
-		if HasMatch(r, p.Pattern()) {
-			p.SetCookies(cookies[p.Name()])
+		if hasMatch(r, p.Pattern()) {
+			p.SetCookies(cookies[p.CookieName()])
 			body, err = p.Parse(r)
 			if err != nil {
 				return
 			}
-			if len(body.VideoList) == 0 {
+			if len(body) == 0 {
 				err = errors.New("unauthorized access")
 				return
 			}
-			sort.Sort(sortVideo{body.VideoList, func(x, y *VideoBody) bool {
+			sort.Sort(Sort{body, func(x, y Response) bool {
 				if x.Size != y.Size {
 					return x.Size > y.Size
 				}
@@ -179,7 +192,7 @@ func ShowVideo(r string, cookies map[string]string) {
 		fmt.Println(err)
 	} else {
 		var p [][]string
-		for _, q := range body.VideoList {
+		for _, q := range body {
 			var part string
 			if q.Part == "" {
 				part = "-"
@@ -234,23 +247,23 @@ func ShowVideo(r string, cookies map[string]string) {
 func ShowWeb() {
 	fmt.Println()
 	for _, s := range spiders {
-		fmt.Println(s.WebName())
+		fmt.Println(s.Name())
 	}
 }
 
-func Do(r, q string, id int, cookies map[string]string) (v *VideoBody, err error) {
+func Do(r, q string, id int, cookies map[string]string) (v Response, err error) {
 	body, err := do(r, cookies)
 	if err != nil {
 		return
 	}
 
-	if len(body.VideoList) == 1 {
-		return body.VideoList[0], nil
+	if len(body) == 1 {
+		return body[0], nil
 	}
 
 	// 根据ID取数据
 	if id != 0 {
-		for _, u := range body.VideoList {
+		for _, u := range body {
 			if u.ID == id {
 				return u, nil
 			}
@@ -259,7 +272,7 @@ func Do(r, q string, id int, cookies map[string]string) (v *VideoBody, err error
 
 	// 没有匹配到ID, 根据视频质量取数据
 	if q != "" {
-		for _, u := range body.VideoList {
+		for _, u := range body {
 			if strings.Contains(u.Quality, q) {
 				return u, nil
 			}
@@ -267,29 +280,12 @@ func Do(r, q string, id int, cookies map[string]string) (v *VideoBody, err error
 	}
 
 	// 都没有匹配到, 取默认值, 默认720P
-	for _, u := range body.VideoList {
+	for _, u := range body {
 		if strings.Contains(u.Quality, "720") {
 			return u, nil
 		}
 	}
 
 	// 如果默认值也取不到, 则取最大码率数据
-	return body.VideoList[0], nil
-}
-
-type sortVideo struct {
-	v    []*VideoBody
-	less func(x, y *VideoBody) bool
-}
-
-func (s sortVideo) Len() int {
-	return len(s.v)
-}
-
-func (s sortVideo) Less(i, j int) bool {
-	return s.less(s.v[i], s.v[j])
-}
-
-func (s sortVideo) Swap(i, j int) {
-	s.v[i], s.v[j] = s.v[j], s.v[i]
+	return body[0], nil
 }

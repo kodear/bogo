@@ -1,11 +1,20 @@
 package spiders
 
 import (
-	"fmt"
+	"regexp"
 	"strings"
 )
 
-func SplitCookies(cookie string) (cookies map[string]string) {
+func hasMatch(r, pattern string) bool {
+	match, err := regexp.MatchString(pattern, r)
+	if err != nil {
+		return false
+	} else {
+		return match
+	}
+}
+
+func splitCookies(cookie string) (cookies map[string]string) {
 	cookies = make(map[string]string)
 	for _, s := range strings.Split(cookie, ";") {
 		c := strings.Split(s, "=")
@@ -18,9 +27,19 @@ func SplitCookies(cookie string) (cookies map[string]string) {
 	return
 }
 
-func JoinCookies(cookies map[string]string) (cookie string) {
-	for key, value := range cookies {
-		cookie += fmt.Sprintf("%s=%s; ", key, value)
-	}
-	return
+type Sort struct {
+	v    []Response
+	less func(x, y Response) bool
+}
+
+func (s Sort) Len() int {
+	return len(s.v)
+}
+
+func (s Sort) Less(i, j int) bool {
+	return s.less(s.v[i], s.v[j])
+}
+
+func (s Sort) Swap(i, j int) {
+	s.v[i], s.v[j] = s.v[j], s.v[i]
 }

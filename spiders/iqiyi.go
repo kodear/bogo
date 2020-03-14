@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
+	url2 "net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -14,8 +14,8 @@ import (
 
 const (
 	iqiyiApi     = "https://cache.video.iqiyi.com/dash?"
-	iqiyiAuthApi = "http://111.59.199.42:9999/authKey?"
-	iqiyiVfApi   = "http://111.59.199.42:9999/vf?"
+	iqiyiAuthApi = "http://111.59.199.42:9999/authKey"
+	iqiyiVfApi   = "http://111.59.199.42:9999/vf"
 )
 
 var iqiyiQualitys = []int{100, 200, 300, 500, 600, 610}
@@ -29,60 +29,61 @@ var iqiyiQuality = map[int]string{
 	610: "1080P50",
 }
 
-type IqiyiBody struct {
+type iqiyiResponse struct {
 	Code string `json:"code"`
 	Msg  string `json:"msg"`
 	Data struct {
 		Program struct {
-			Video []IqiyiVideoBody `json:"video"`
+			Video []struct {
+				Ff       string `json:"ff"`
+				Name     string `json:"name"`
+				Vsize    int    `json:"vsize"`
+				Duration int    `json:"duration"`
+				Bid      int    `json:"bid"`
+				M3u8     string `json:"m3u8"`
+				Scrsz    string `json:"scrsz"`
+			} `json:"video"`
 		} `json:"program"`
 	} `json:"data"`
-}
-
-type IqiyiVideoBody struct {
-	Ff       string `json:"ff"`
-	Name     string `json:"name"`
-	Vsize    int    `json:"vsize"`
-	Duration int    `json:"duration"`
-	Bid      int    `json:"bid"`
-	M3u8     string `json:"m3u8"`
-	Scrsz    string `json:"scrsz"`
 }
 
 type userID struct {
 	Uid int `json:"uid"`
 }
 
-type Iqiyi struct {
-	SpiderObject
+type IqiyiIE struct {
+	Spider
 }
 
-func (i *Iqiyi) Parse(r string) (body Body, err error) {
-	bytes, err := i.DownloadWeb(r, url.Values{}, map[string]string{})
+func (tv *IqiyiIE) Parse(url string) (body []Response, err error) {
+	response, err := tv.DownloadWebPage(url, url2.Values{}, map[string]string{})
 	if err != nil {
 		return
 	}
-	re := regexp.MustCompile(`param\['tvid'\] = \"(?P<tvid>\d+)\";\s+param\['vid'\] = "(?P<vid>[a-zA-Z\d]+)"`)
-	match := re.FindAllStringSubmatch(string(bytes), -1)
-	if len(match) == 0 || len(match[0]) < 3 {
+
+	matchResults, err := response.Search(`param\['tvid'\] = \"(?P<tvid>\d+)\";\s+param\['vid'\] = "(?P<vid>[a-zA-Z\d]+)"`)
+	if err != nil {
+		return
+	}
+
+	if len(matchResults) == 0 || len(matchResults[0]) < 3 {
 		err = errors.New("parse web page error")
 		return
 	}
 
-	tvid := match[0][1]
-	vid := match[0][2]
+	tvid := matchResults[0][1]
+	vid := matchResults[0][2]
 
 	var title string
-	re = regexp.MustCompile(`"tvName":"(?P<title>.*)","isfeizhengpian"`)
-	match = re.FindAllStringSubmatch(string(bytes), -1)
-	if len(match) == 0 || len(match[0]) < 2 {
+	matchResults, _ = response.Search(`"tvName":"(?P<title>.*)","isfeizhengpian"`)
+	if len(matchResults) == 0 || len(matchResults[0]) < 2 {
 		title = vid
 	} else {
-		title = match[0][1]
+		title = matchResults[0][1]
 	}
 
 	tm := time.Now().Unix() * 1000
-	dfp := i.Cookies["__dfp"]
+	dfp := tv.Cookies["__dfp"]
 	if dfp != "" {
 		dfpSlice := strings.Split(dfp, "@")
 		if len(dfpSlice) > 0 {
@@ -90,10 +91,11 @@ func (i *Iqiyi) Parse(r string) (body Body, err error) {
 		}
 	}
 
-	p, err := url.ParseQuery(i.Cookies["P00002"])
+	p, err := url2.ParseQuery(tv.Cookies["P00002"])
 	if err != nil {
 		return
 	}
+
 	var uid string
 	if len(p) != 0 {
 		for k, _ := range p {
@@ -111,13 +113,13 @@ func (i *Iqiyi) Parse(r string) (body Body, err error) {
 
 	}
 
-	bytes, err = i.DownloadWeb(iqiyiAuthApi, url.Values{"tvid": []string{tvid}, "tm": []string{strconv.Itoa(int(tm))}}, map[string]string{})
+	response, err = tv.DownloadWebPage(iqiyiAuthApi, url2.Values{"tvid": []string{tvid}, "tm": []string{strconv.Itoa(int(tm))}}, map[string]string{})
 	if err != nil {
 		return
 	}
 
 	for _, q := range iqiyiQualitys {
-		params := url.Values{
+		params := url2.Values{
 			"tvid":          []string{tvid},
 			"vid":           []string{vid},
 			"bid":           []string{strconv.Itoa(q)},
@@ -127,21 +129,21 @@ func (i *Iqiyi) Parse(r string) (body Body, err error) {
 			"uid":           []string{uid},
 			"ori":           []string{"pcw"},
 			"ps":            []string{"0"},
-			"k_uid":         []string{i.Cookies["QC005"]},
+			"k_uid":         []string{tv.Cookies["QC005"]},
 			"pt":            []string{"0"},
 			"d":             []string{"0"},
 			"s":             []string{""},
 			"lid":           []string{""},
 			"cf":            []string{""},
 			"ct":            []string{""},
-			"authKey":       []string{string(bytes)},
+			"authKey":       []string{response.String},
 			"k_tag":         []string{"1"},
 			"ost":           []string{"0"},
 			"ppt":           []string{"0"},
 			"dfp":           []string{dfp},
 			"locale":        []string{"zh_cn"},
 			"prio":          []string{`{"ff":"f4v","code":2}`},
-			"pck":           []string{i.Cookies["P00001"]},
+			"pck":           []string{tv.Cookies["P00001"]},
 			"k_err_retries": []string{"0"},
 			"up":            []string{""},
 			"qd_v":          []string{"2"},
@@ -154,29 +156,31 @@ func (i *Iqiyi) Parse(r string) (body Body, err error) {
 			"bop":           []string{fmt.Sprintf(`{"version":"10.0","dfp":"{%s}"}`, dfp)},
 		}
 
-		var u []byte
-		u, err = i.DownloadWeb(iqiyiVfApi,
-			url.Values{
+		req, err := tv.DownloadWebPage(iqiyiVfApi,
+			url2.Values{
 				"url": []string{base64.StdEncoding.EncodeToString([]byte(iqiyiApi + params.Encode() + "&ut=1"))},
 			}, map[string]string{})
 
 		if err != nil {
-			return
+			return nil, err
 		}
-		var data IqiyiBody
-		err = i.DownloadJson("GET", string(u), url.Values{}, nil, map[string]string{"Referer": r}, &data)
+
+		var data iqiyiResponse
+		req, err = tv.DownloadWebPage(req.String, url2.Values{}, map[string]string{"Referer": url})
 		if err != nil {
-			return
+			return nil, err
 		}
+
+		err = req.Json(&data)
 
 		if data.Code != "A00000" {
 			err = errors.New(data.Msg)
-			return
+			return nil, err
 		}
 
 		var repeated bool
 		for _, v := range data.Data.Program.Video {
-			for _, b := range body.VideoList {
+			for _, b := range body {
 				if b.ID == v.Bid && v.M3u8 != "" {
 					repeated = true
 					break
@@ -200,7 +204,7 @@ func (i *Iqiyi) Parse(r string) (body Body, err error) {
 				}
 				w, _ := strconv.Atoi(width)
 				h, _ := strconv.Atoi(height)
-				body.VideoList = append(body.VideoList, &VideoBody{
+				body = append(body, Response{
 					ID:       v.Bid,
 					Title:    title,
 					Part:     v.Name,
@@ -210,8 +214,8 @@ func (i *Iqiyi) Parse(r string) (body Body, err error) {
 					Width:    w,
 					Height:   h,
 					Quality:  iqiyiQuality[v.Bid],
-					Links: []VideoAttr{
-						VideoAttr{
+					Links: []URLAttr{
+						URLAttr{
 							URL:   v.M3u8,
 							Order: 0,
 							Size:  v.Vsize,
@@ -228,14 +232,18 @@ func (i *Iqiyi) Parse(r string) (body Body, err error) {
 
 }
 
-func (i *Iqiyi) Name() string {
+func (tv *IqiyiIE) CookieName() string {
 	return "iqiyi"
 }
 
-func (i *Iqiyi) WebName() string {
-	return "爱奇艺【https://www.iqiyi.com/】"
+func (tv *IqiyiIE) Name() string {
+	return "爱奇艺"
 }
 
-func (i *Iqiyi) Pattern() string {
+func (tv *IqiyiIE) Domain() string {
+	return "https://www.iqiyi.com/"
+}
+
+func (tv *IqiyiIE) Pattern() string {
 	return `https?://(?:www\.)iqiyi\.com/v_(?P<id>[\da-z]+)`
 }

@@ -2,7 +2,7 @@ package spiders
 
 import (
 	"errors"
-	"net/url"
+	url2 "net/url"
 	"regexp"
 	"strconv"
 )
@@ -21,7 +21,7 @@ var YouKuQuality = map[string][]string{
 	"auto":      []string{"h264"},
 }
 
-type YouKuBody struct {
+type YouKuResponse struct {
 	Cost float32 `json:"cost"`
 	Data struct {
 		Eroor struct {
@@ -46,30 +46,31 @@ type YouKuBody struct {
 	} `json:"data"`
 }
 
-type YouKu struct {
-	SpiderObject
+type YouKuIE struct {
+	Spider
 }
 
-func (y *YouKu) Parse(r string) (body Body, err error) {
-	vid, err := vid(r)
+func (tv *YouKuIE) Parse(url string) (body []Response, err error) {
+	vid, err := vid(url)
 	if err != nil {
 		return
 	}
-	params := url.Values{"ccode": []string{"0512"}, "client_ip": []string{"192.168.1.1"}, "client_ts": []string{"1569140694"}, "vid": []string{vid}, "utid": []string{y.Cookies["cna"]}}
+	params := url2.Values{"ccode": []string{"0512"}, "client_ip": []string{"192.168.1.1"}, "client_ts": []string{"1569140694"}, "vid": []string{vid}, "utid": []string{tv.Cookies["cna"]}}
 
-	headers := map[string]string{"Referer": YoukuReferer + vid}
-	var data YouKuBody
-	err = y.DownloadJson("GET", YoukuApi, params, nil, headers, &data)
+	var data YouKuResponse
+	response, err := tv.DownloadWebPage(YoukuApi, params, map[string]string{"Referer": YoukuReferer + vid})
 	if err != nil {
 		return
 	}
 
-	if data.Data.Eroor.Code != 0 {
+	err = response.Json(&data)
+	if err != nil {
+		return
+	} else if data.Data.Eroor.Code != 0 {
 		err = errors.New(data.Data.Eroor.Note)
 		return
 	}
 
-	var videoList []*VideoBody
 	for index, stream := range data.Data.Stream {
 		var quality string
 		for key, value := range YouKuQuality {
@@ -85,7 +86,7 @@ func (y *YouKu) Parse(r string) (body Body, err error) {
 			quality = "auto"
 		}
 
-		videoList = append(videoList, &VideoBody{
+		body = append(body, Response{
 			ID:         index + 1,
 			Title:      data.Data.Show.Title,
 			Part:       strconv.Itoa(data.Data.Show.Stage),
@@ -96,8 +97,8 @@ func (y *YouKu) Parse(r string) (body Body, err error) {
 			Height:     stream.Height,
 			StreamType: stream.StreamType,
 			Quality:    quality,
-			Links: []VideoAttr{
-				VideoAttr{
+			Links: []URLAttr{
+				URLAttr{
 					URL:   stream.Url,
 					Order: 0,
 					Size:  stream.StreamExt.Size,
@@ -109,20 +110,22 @@ func (y *YouKu) Parse(r string) (body Body, err error) {
 
 	}
 
-	body.VideoList = videoList
-
 	return
 }
 
-func (y *YouKu) Name() string {
+func (tv *YouKuIE) CookieName() string {
 	return "youku"
 }
 
-func (y *YouKu) WebName() string {
-	return "优酷【https://www.youku.com/】"
+func (tv *YouKuIE) Name() string {
+	return "优酷"
 }
 
-func (y *YouKu) Pattern() string {
+func (tv *YouKuIE) Domain() string {
+	return "https://www.youku.com/"
+}
+
+func (tv *YouKuIE) Pattern() string {
 	return `https?://(?:v\.|player\.|video\.)?(?:youku|tudou)\.com/(?:v_show|v_nextstage|embed|v)/(?:id_)?(?P<vid>[a-zA-Z\d]+={0,2})`
 }
 

@@ -3,26 +3,11 @@ package spiders
 import (
 	"encoding/json"
 	"errors"
-	"net/url"
-	"regexp"
+	url2 "net/url"
 	"strings"
 )
 
-type AcfunVideoBody struct {
-	Url      string  `json:"url"`
-	Width    int     `json:"width"`
-	Height   int     `json:"height"`
-	Quality  string  `json:"qualityType"`
-	Duration float32 `json:"duration"`
-}
-
-type AcfunVideoData struct {
-	AdaptationSet struct {
-		Representation []AcfunVideoBody `json:"representation"`
-	} `json:"adaptationSet"`
-}
-
-type AcfunBody struct {
+type videoInfo struct {
 	Result           int    `json:"result"`
 	Title            string `json:"title"`
 	CurrentVideoInfo struct {
@@ -32,25 +17,63 @@ type AcfunBody struct {
 	} `json:"currentVideoInfo"`
 }
 
-type Acfun struct {
-	SpiderObject
+type bangumiData struct {
+	Title            string `json:"bangumiTitle"`
+	Part             string `json:"episodeName"`
+	CurrentVideoInfo struct {
+		DurationMillis float32 `json:"durationMillis"`
+		KsPlayJson     string  `json:"ksPlayJson"`
+	} `json:"currentVideoInfo"`
 }
 
-func (a *Acfun) Parse(r string) (body Body, err error) {
-	bytes, err := a.DownloadWeb(r, url.Values{}, map[string]string{})
+type currentVideoInfo struct {
+	AdaptationSet struct {
+		Representation []struct {
+			Url      string  `json:"url"`
+			Width    int     `json:"width"`
+			Height   int     `json:"height"`
+			Quality  string  `json:"qualityType"`
+			Duration float32 `json:"duration"`
+		} `json:"representation"`
+	} `json:"adaptationSet"`
+}
+
+// Acfun 弹幕视频网
+
+type AcfunIE struct {
+	Spider
+}
+
+func (tv *AcfunIE) CookieName() string {
+	return "acfun"
+}
+
+func (tv *AcfunIE) Name() string {
+	return "Acfun"
+}
+
+func (tv *AcfunIE) Domain() string {
+	return "https://www.acfun.cn/"
+}
+
+func (tv *AcfunIE) Pattern() string {
+	return `https?://(?:www\.)?acfun\.cn/v/ac\d+`
+}
+
+func (tv *AcfunIE) Parse(url string) (body []Response, err error) {
+	response, err := tv.DownloadWebPage(url, url2.Values{}, map[string]string{})
 	if err != nil {
 		return
 	}
 
-	regex := regexp.MustCompile(`window.videoInfo = (\{.*\});`)
-	complie := regex.FindAllSubmatch(bytes, -1)
-	if len(complie) == 0 || len(complie[0]) < 2 {
+	matchResult, err := response.Search(`window.videoInfo = (\{.*\});`)
+	if len(matchResult) == 0 || len(matchResult[0]) < 2 {
 		err = errors.New("parse web page error")
 		return
 	}
 
-	var data AcfunBody
-	err = json.Unmarshal(complie[0][1], &data)
+	var data videoInfo
+	err = json.Unmarshal([]byte(matchResult[0][1]), &data)
 	if err != nil {
 		return
 	}
@@ -59,25 +82,23 @@ func (a *Acfun) Parse(r string) (body Body, err error) {
 		err = errors.New("access denied")
 	}
 
-	var videoData AcfunVideoData
+	var videoData currentVideoInfo
 	err = json.Unmarshal([]byte(data.CurrentVideoInfo.KsPlayJson), &videoData)
 	if err != nil {
 		return
 	}
 
 	for index, video := range videoData.AdaptationSet.Representation {
-		body.VideoList = append(body.VideoList, &VideoBody{
+		body = append(body, Response{
 			ID:     index + 1,
 			Title:  strings.TrimSpace(data.Title),
 			Part:   data.CurrentVideoInfo.Part,
 			Format: "mp4",
 			Width:  video.Width,
 			Height: video.Height,
-			Links: []VideoAttr{
-				VideoAttr{
-					URL:   video.Url,
-					Order: 0,
-					Size:  0,
+			Links: []URLAttr{
+				URLAttr{
+					URL: video.Url,
 				},
 			},
 			Quality:          video.Quality,
@@ -89,14 +110,71 @@ func (a *Acfun) Parse(r string) (body Body, err error) {
 	return
 }
 
-func (a *Acfun) Name() string {
-	return "acfun"
+// Acfun 番剧
+
+type AcfunBangumiIE struct {
+	Spider
 }
 
-func (a *Acfun) WebName() string {
-	return "Acfun【https://www.acfun.cn/】"
+func (tv *AcfunBangumiIE) CookieName() string {
+	return "acfun-bangumi"
 }
 
-func (a *Acfun) Pattern() string {
-	return `https?://(?:www\.)?acfun\.cn/v/ac\d+`
+func (tv *AcfunBangumiIE) Name() string {
+	return "Acfun番剧"
+}
+
+func (tv *AcfunBangumiIE) Domain() string {
+	return "https://www.acfun.cn/v/list155/index.htm"
+}
+
+func (tv *AcfunBangumiIE) Pattern() string {
+	return `https?://(?:www\.)?acfun\.cn/bangumi/`
+}
+
+func (tv *AcfunBangumiIE) Parse(url string) (body []Response, err error) {
+	response, err := tv.DownloadWebPage(url, url2.Values{}, map[string]string{})
+	if err != nil {
+		return
+	}
+
+	matchResult, err := response.Search(`window.bangumiData = (\{.*\});`)
+	if len(matchResult) == 0 || len(matchResult[0]) < 2 {
+		err = errors.New("parse web page error")
+		return
+	}
+
+	var data bangumiData
+	err = json.Unmarshal([]byte(matchResult[0][1]), &data)
+	if err != nil {
+		return
+	}
+
+	var videoData currentVideoInfo
+	err = json.Unmarshal([]byte(data.CurrentVideoInfo.KsPlayJson), &videoData)
+	if err != nil {
+		return
+	}
+
+	for index, video := range videoData.AdaptationSet.Representation {
+		body = append(body, Response{
+			ID:      index + 1,
+			Title:   strings.TrimSpace(data.Title),
+			Part:    data.Part,
+			Format:  "mp4",
+			Width:   video.Width,
+			Height:  video.Height,
+			Quality: video.Quality,
+			Links: []URLAttr{
+				URLAttr{
+					URL: video.Url,
+				},
+			},
+			Duration:         int(video.Duration),
+			DownloadProtocol: "hls",
+		})
+	}
+
+	return
+
 }

@@ -48,8 +48,9 @@ func (h *HTTP) Do(link, text, file, fname string, links []string) {
 		_, _ = f.Write(buf[:n])
 		if !h.DownloadINIT {
 			h.DownloadINIT = true
-			h.Ch <- n
 		}
+
+		h.Ch <- n
 	}
 	_ = res.Body.Close()
 

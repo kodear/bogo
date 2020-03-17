@@ -26,6 +26,7 @@ var spiders = []Spiders{
 	&MgtvIE{},
 	&YouKuIE{},
 	&RiJuTvIE{},
+	&YuespIE{},
 }
 
 type Spiders interface {

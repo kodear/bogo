@@ -12,8 +12,6 @@ type HTTP struct {
 }
 
 func (h *HTTP) Do(link, text, file, fname string, links []string) {
-	h.ProgressINIT = true
-
 	f, err := os.Create(fname)
 	if err != nil {
 		h.DownloadMessage = err
@@ -37,15 +35,25 @@ func (h *HTTP) Do(link, text, file, fname string, links []string) {
 		return
 	}
 
+	if h.Len == 0 {
+		h.Len = int(res.ContentLength)
+	}
+	h.ProgressINIT = true
+
 	h.Ch = make(chan int, 1000)
 	buf := make([]byte, 4096)
 	for {
 		n, err := res.Body.Read(buf)
-		if err != nil {
+		if n > 0 {
+			_, _ = f.Write(buf[:n])
+		} else if err != nil && err == io.EOF {
 			_ = f.Close()
 			break
+		} else if err != nil {
+			h.DownloadMessage = err
+			return
 		}
-		_, _ = f.Write(buf[:n])
+
 		if !h.DownloadINIT {
 			h.DownloadINIT = true
 		}
@@ -105,6 +113,9 @@ func (h *HTTPSegFLV) Do(link, text, file, fname string, links []string) {
 		buf := make([]byte, 4096)
 		for {
 			n, err := res.Body.Read(buf)
+			if n > 0 {
+				_, _ = f.Write(buf[:n])
+			}
 			if err != nil && err == io.EOF {
 				_ = f.Close()
 				break
@@ -114,7 +125,6 @@ func (h *HTTPSegFLV) Do(link, text, file, fname string, links []string) {
 				return
 			}
 
-			_, _ = f.Write(buf[:n])
 			if !h.DownloadINIT {
 				h.DownloadINIT = true
 			}

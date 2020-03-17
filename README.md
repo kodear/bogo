@@ -10,6 +10,7 @@
 * [腾讯视频](https://v.qq.com/)
 * [芒果TV](https://www.mgtv.com/tv/)
 * [日剧TV](https://www.rijutv.com/)
+* [粤视频](http://www.yuesp.com/)
 
 ### 下载地址
 * [bogo-v0.0.4-windows-x64.zip](http://pkg.maoq.pw/pkg/bogo/bogo-v0.0.4-windows-x64.zip)

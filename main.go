@@ -207,7 +207,7 @@ func main() {
 	}
 
 	bar := pb.New(downloader.Max()).SetRefreshRate(time.Millisecond * 10)
-	if video.Size != 0 {
+	if video.Size != 0 || video.DownloadProtocol == "http" {
 		bar.SetUnits(pb.U_BYTES_DEC)
 	}
 	bar.ShowSpeed = true

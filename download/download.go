@@ -65,6 +65,8 @@ func LoadDownloader(protocol string) (downloader Downloader, err error) {
 		downloader = &HTTP{}
 	} else if protocol == "httpSegFlv" {
 		downloader = &HTTPSegFLV{}
+	} else if protocol == "httpSegF4v" {
+		downloader = &HTTPSegF4V{}
 	} else {
 		err = errors.New("the agreement is not currently supported: " + protocol)
 	}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	url2 "net/url"
 	"regexp"
 	"strconv"
@@ -16,6 +17,7 @@ const (
 	iqiyiApi     = "https://cache.video.iqiyi.com/dash?"
 	iqiyiAuthApi = "http://111.59.199.42:9999/authKey"
 	iqiyiVfApi   = "http://111.59.199.42:9999/vf"
+	iqiyiF4vApi  = "http://111.59.199.42:9999/f4v"
 )
 
 var iqiyiQualitys = []int{100, 200, 300, 500, 600, 610}
@@ -33,6 +35,15 @@ type iqiyiResponse struct {
 	Code string `json:"code"`
 	Msg  string `json:"msg"`
 	Data struct {
+		Aid  int    `json:"aid"`
+		Dd   string `json:"dd"`
+		Boss struct {
+			Data struct {
+				Pt string `json:"pt"`
+				T  string `json:"t"`
+				U  string `json:"u"`
+			} `json:"data"`
+		} `json:"boss"`
 		Program struct {
 			Video []struct {
 				Ff       string `json:"ff"`
@@ -42,6 +53,9 @@ type iqiyiResponse struct {
 				Bid      int    `json:"bid"`
 				M3u8     string `json:"m3u8"`
 				Scrsz    string `json:"scrsz"`
+				Fs       []struct {
+					L string `json:"l"`
+				} `json:"fs"`
 			} `json:"video"`
 		} `json:"program"`
 	} `json:"data"`
@@ -49,6 +63,10 @@ type iqiyiResponse struct {
 
 type userID struct {
 	Uid int `json:"uid"`
+}
+
+type us struct {
+	L string `json:"l"`
 }
 
 type IqiyiIE struct {
@@ -181,7 +199,7 @@ func (tv *IqiyiIE) Parse(url string) (body []Response, err error) {
 		var repeated bool
 		for _, v := range data.Data.Program.Video {
 			for _, b := range body {
-				if b.ID == v.Bid && v.M3u8 != "" {
+				if b.ID == v.Bid && (v.M3u8 != "" || len(v.Fs) > 0) {
 					repeated = true
 					break
 				}
@@ -191,7 +209,7 @@ func (tv *IqiyiIE) Parse(url string) (body []Response, err error) {
 				break
 			}
 
-			if v.M3u8 != "" {
+			if v.M3u8 != "" || len(v.Fs) > 0 {
 				width := "0"
 				height := "0"
 				if v.Scrsz != "" {
@@ -204,24 +222,71 @@ func (tv *IqiyiIE) Parse(url string) (body []Response, err error) {
 				}
 				w, _ := strconv.Atoi(width)
 				h, _ := strconv.Atoi(height)
-				body = append(body, Response{
-					ID:       v.Bid,
-					Title:    title,
-					Part:     v.Name,
-					Format:   "mp4",
-					Size:     v.Vsize,
-					Duration: v.Duration,
-					Width:    w,
-					Height:   h,
-					Quality:  iqiyiQuality[v.Bid],
-					Links: []URLAttr{
-						URLAttr{
+
+				var format string
+				var urlAttr []URLAttr
+				var downloadProtocol string
+				if v.M3u8 != "" {
+					format = "mp4"
+					downloadProtocol = "hlsText"
+					urlAttr = []URLAttr{
+						{
 							URL:   v.M3u8,
 							Order: 0,
 							Size:  v.Vsize,
 						},
-					},
-					DownloadProtocol: "hlsText",
+					}
+				} else {
+					format = "f4v"
+					if len(v.Fs) > 1 {
+						downloadProtocol = "httpSegF4v"
+					} else {
+						downloadProtocol = "http"
+					}
+
+					for _, u := range v.Fs {
+						l := data.Data.Dd + u.L
+						l += fmt.Sprintf("&cross-domain=1&qyid=%s&qypid=%s&t=%s&cid=afbe8fd3d73448c9&vid=%s&QY00001=%s&su=%s&client=&z=&mi=%s&bt=&ct=5&e=&ib=4&ptime=0&pv=0.1&tn=%v",
+							data.Data.Boss.Data.Pt, tvid+"_02020031010000000000", data.Data.Boss.Data.T, vid, data.Data.Boss.Data.U, data.Data.Boss.Data.Pt,
+							fmt.Sprintf("tv_%d_%s_%s", data.Data.Aid, tvid, vid), rand.Float32())
+
+						x := strings.Split(u.L, "?")[0]
+						z := strings.Split(x, "/")
+						r, err := tv.DownloadWebPage(iqiyiF4vApi, url2.Values{"sign": []string{data.Data.Boss.Data.T + strings.Split(z[len(z)-1], ".")[0]}}, map[string]string{})
+						if err != nil {
+							return nil, err
+						}
+
+						p, err := tv.DownloadWebPage(l+"&ibt="+r.String, url2.Values{}, map[string]string{})
+						if err != nil {
+							return nil, err
+						}
+
+						var d us
+						err = p.Json(&d)
+						if err != nil {
+							return nil, err
+						}
+
+						urlAttr = append(urlAttr, URLAttr{
+							URL: d.L,
+						})
+					}
+
+				}
+
+				body = append(body, Response{
+					ID:               v.Bid,
+					Title:            title,
+					Part:             v.Name,
+					Format:           format,
+					Size:             v.Vsize,
+					Duration:         v.Duration,
+					Width:            w,
+					Height:           h,
+					Quality:          iqiyiQuality[v.Bid],
+					Links:            urlAttr,
+					DownloadProtocol: downloadProtocol,
 				})
 				break
 			}

@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-const Version = "0.0.5"
+const Version = "0.0.6"
 
 var Cookies = map[string]string{
 	"bilibili": "SESSDATA=8a6276a5%2c1599717086%2c352e5*31",
@@ -147,7 +147,7 @@ func main() {
 		downloadUrl = video.Links[0].URL
 	} else if video.DownloadProtocol == "hlsText" {
 		downloadText = video.Links[0].URL
-	} else if video.DownloadProtocol == "httpSegFlv" {
+	} else if video.DownloadProtocol == "httpSegFlv" || video.DownloadProtocol == "httpSegF4v" {
 		for _, v := range video.Links {
 			downloadUrls = append(downloadUrls, v.URL)
 		}

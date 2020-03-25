@@ -206,7 +206,7 @@ func (tv *BiliBiliIE) Domain() string {
 }
 
 func (tv *BiliBiliIE) Pattern() string {
-	return `https?://(?:www\.)?bilibili\.com/video/av\d+`
+	return `https?://(?:www\.)?bilibili\.com/video/([A-Z])+`
 }
 
 // 哔哩哔哩番剧

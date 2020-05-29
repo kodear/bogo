@@ -7,7 +7,7 @@ import (
 )
 
 type RiJuTvIE struct {
-	Spider
+	SpiderIE
 }
 
 func (tv *RiJuTvIE) Parse(url string) (body []Response, err error) {
@@ -100,9 +100,6 @@ func (tv *RiJuTvIE) Name() string {
 	return "日剧TV"
 }
 
-func (tv *RiJuTvIE) Domain() string {
-	return "https://www.rijutv.com/"
-}
 
 func (tv *RiJuTvIE) Pattern() string {
 	// https://www.rijutv.com/player/90485.html

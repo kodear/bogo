@@ -38,10 +38,10 @@ type currentVideoInfo struct {
 	} `json:"adaptationSet"`
 }
 
-// Acfun 弹幕视频网
 
+// Acfun 弹幕视频网
 type AcfunIE struct {
-	Spider
+	SpiderIE
 }
 
 func (tv *AcfunIE) CookieName() string {
@@ -50,10 +50,6 @@ func (tv *AcfunIE) CookieName() string {
 
 func (tv *AcfunIE) Name() string {
 	return "Acfun"
-}
-
-func (tv *AcfunIE) Domain() string {
-	return "https://www.acfun.cn/"
 }
 
 func (tv *AcfunIE) Pattern() string {
@@ -110,10 +106,10 @@ func (tv *AcfunIE) Parse(url string) (body []Response, err error) {
 	return
 }
 
-// Acfun 番剧
 
+// Acfun 番剧
 type AcfunBangumiIE struct {
-	Spider
+	SpiderIE
 }
 
 func (tv *AcfunBangumiIE) CookieName() string {
@@ -122,10 +118,6 @@ func (tv *AcfunBangumiIE) CookieName() string {
 
 func (tv *AcfunBangumiIE) Name() string {
 	return "Acfun番剧"
-}
-
-func (tv *AcfunBangumiIE) Domain() string {
-	return "https://www.acfun.cn/v/list155/index.htm"
 }
 
 func (tv *AcfunBangumiIE) Pattern() string {

@@ -1,8 +1,10 @@
 package download
 
 import (
+	"errors"
 	"github.com/zhangpeihao/goflv"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 )
@@ -29,9 +31,21 @@ func (h *HTTP) Do(link, text, file, fname string, links []string) {
 		req.Header.Add(k, v)
 	}
 
+	cookies, ok := h.Headers["Cookies"]
+	if ok{
+		req.Header.Set("Cookies", cookies)
+	}
+
 	res, err := client.Do(req)
 	if err != nil {
 		h.DownloadMessage = err
+		return
+	}else if res.StatusCode / 100 > 3 {
+		body, err := ioutil.ReadAll(res.Body)
+		if err == nil{
+			h.DownloadMessage = errors.New(string(body))
+			_ = res.Body.Close()
+		}
 		return
 	}
 
@@ -235,6 +249,7 @@ func (h *HTTPSegF4V) Do(link, text, file, fname string, links []string) {
 			h.Ch <- n
 		}
 		_ = res.Body.Close()
+		_ = f.Close()
 
 		// ==========================================================================================================
 		fi, err := flv.OpenFile(fname + ".tmp")
@@ -245,7 +260,9 @@ func (h *HTTPSegF4V) Do(link, text, file, fname string, links []string) {
 
 		//var nowAudioTime uint32
 		//var nowVideoTime uint32
+		var sum int
 		for {
+			sum += 1
 			header, data, err := fi.ReadTag()
 			if err != nil {
 				//audioTime += nowAudioTime

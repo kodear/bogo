@@ -47,7 +47,7 @@ type YouKuResponse struct {
 }
 
 type YouKuIE struct {
-	Spider
+	SpiderIE
 }
 
 func (tv *YouKuIE) Parse(url string) (body []Response, err error) {
@@ -121,8 +121,8 @@ func (tv *YouKuIE) Name() string {
 	return "优酷"
 }
 
-func (tv *YouKuIE) Domain() string {
-	return "https://www.youku.com/"
+func (tv *YouKuIE) Domain() *Cookie {
+	return &Cookie{"youku",true, []string{".youku.com", "user.youku.com"}}
 }
 
 func (tv *YouKuIE) Pattern() string {

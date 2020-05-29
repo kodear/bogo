@@ -1,6 +1,7 @@
 package spiders
 
 import (
+	"encoding/json"
 	"regexp"
 	"strings"
 )
@@ -42,4 +43,32 @@ func (s Sort) Less(i, j int) bool {
 
 func (s Sort) Swap(i, j int) {
 	s.v[i], s.v[j] = s.v[j], s.v[i]
+}
+
+
+type Parse struct {
+	Bytes  []byte
+	String string
+}
+
+func NewParse(b []byte) *Parse {
+	return &Parse{
+		Bytes:  b,
+		String: string(b),
+	}
+}
+
+func (p *Parse) Json(data interface{}) (err error) {
+	err = json.Unmarshal(p.Bytes, &data)
+	return
+}
+
+func (p *Parse) Search(pattern string) (strings [][]string, err error) {
+	regex, err := regexp.Compile(pattern)
+	if err != nil {
+		return
+	}
+
+	strings = regex.FindAllStringSubmatch(p.String, -1)
+	return
 }

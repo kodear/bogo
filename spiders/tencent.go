@@ -73,7 +73,7 @@ type auth struct {
 var tencentQuality = []string{"sd", "hd", "shd", "fhd"}
 
 type TencentIE struct {
-	Spider
+	SpiderIE
 }
 
 func (tv *TencentIE) Parse(url string) (body []Response, err error) {
@@ -266,8 +266,8 @@ func (tv *TencentIE) Name() string {
 	return "腾讯视频"
 }
 
-func (tv *TencentIE) Domain() string {
-	return "https://v.qq.com/"
+func (tv *TencentIE) Domain() *Cookie {
+	return &Cookie{"tencent",true, []string{".qq.com", ".video.qq.com"}}
 }
 
 func (tv *TencentIE) Pattern() string {

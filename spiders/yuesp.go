@@ -7,7 +7,7 @@ import (
 )
 
 type YuespIE struct {
-	Spider
+	SpiderIE
 }
 
 func (tv *YuespIE) CookieName() string {
@@ -18,9 +18,6 @@ func (tv *YuespIE) Name() string {
 	return "yuesp"
 }
 
-func (tv *YuespIE) Domain() string {
-	return "http://www.yuesp.com/"
-}
 
 func (tv *YuespIE) Pattern() string {
 	// http://www.yuesp.com/play/index6424-1-0.html

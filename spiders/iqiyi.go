@@ -70,7 +70,7 @@ type us struct {
 }
 
 type IqiyiIE struct {
-	Spider
+	SpiderIE
 }
 
 func (tv *IqiyiIE) Parse(url string) (body []Response, err error) {
@@ -305,8 +305,8 @@ func (tv *IqiyiIE) Name() string {
 	return "爱奇艺"
 }
 
-func (tv *IqiyiIE) Domain() string {
-	return "https://www.iqiyi.com/"
+func (tv *IqiyiIE) Domain() *Cookie {
+	return &Cookie{"iqiyi",true, []string{".iqiyi.com"}}
 }
 
 func (tv *IqiyiIE) Pattern() string {

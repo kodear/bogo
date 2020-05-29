@@ -24,7 +24,7 @@ var mgtvQuality = map[int]string{
 }
 
 type MgtvIE struct {
-	Spider
+	SpiderIE
 }
 
 type mgtvAuthResponse struct {
@@ -166,8 +166,8 @@ func (tv *MgtvIE) Name() string {
 	return "芒果TV"
 }
 
-func (tv *MgtvIE) Domain() string {
-	return "https://www.mgtv.com/tv/"
+func (tv *MgtvIE) Domain() *Cookie {
+	return &Cookie{"mgtv",true, []string{".mgtv.com"}}
 }
 
 func (tv *MgtvIE) Pattern() string {

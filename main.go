@@ -2,18 +2,9 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"github.com/zhxingy/bogo/download"
-	"github.com/zhxingy/bogo/spiders"
-	"gopkg.in/cheggaaa/pb.v1"
 	"os"
 	"os/user"
-	"path"
 	"path/filepath"
-	"regexp"
-	"runtime"
-	"strings"
-	"time"
 )
 
 const Version = "0.0.6"
@@ -90,140 +81,140 @@ func DownloadPath() string {
 	return downloadRoot
 
 }
-func main() {
-	flag.Parse()
-
-	// 加载配置文件
-	configFile := ConfigName()
-	downloadRoot := DownloadPath()
-	cfg := NewConfig(configFile, downloadRoot, Cookies)
-	cfg.Read()
-
-	if downloadHost != cfg.root && downloadHost != "" {
-		cfg.root = downloadHost
-		cfg.Write()
-		os.Exit(0)
-	}
-
-	if version {
-		fmt.Printf("Bogo Version: %v\n", Version)
-		os.Exit(0)
-	}
-
-	if showWeb {
-		spiders.ShowWeb()
-		os.Exit(0)
-	}
-
-	if videoURL == "" {
-		flag.Usage()
-		os.Exit(1)
-	}
-
-	cookies := make(map[string]string)
-	for k, v := range cfg.cookies {
-		cookies[k] = v
-	}
-
-	if videoShow {
-		spiders.ShowVideo(videoURL, cookies)
-		os.Exit(0)
-	}
-
-	video, err := spiders.Do(videoURL, videoQuality, videoID, cookies)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(2)
-	}
-
-	// 初始化下载器错误
-	downloader, err := download.LoadDownloader(video.DownloadProtocol)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(2)
-	}
-
-	if video.DownloadProtocol == "hls" || video.DownloadProtocol == "http" {
-		downloadUrl = video.Links[0].URL
-	} else if video.DownloadProtocol == "hlsText" {
-		downloadText = video.Links[0].URL
-	} else if video.DownloadProtocol == "httpSegFlv" || video.DownloadProtocol == "httpSegF4v" {
-		for _, v := range video.Links {
-			downloadUrls = append(downloadUrls, v.URL)
-		}
-	} else {
-		fmt.Println("did not match to downloader")
-		os.Exit(3)
-	}
-
-	if videoDownloadFile == "" {
-		if video.Title == video.Part {
-			video.Part = ""
-		} else if video.Part != "" {
-			video.Part = "-" + video.Part
-		}
-		videoDownloadFile = video.Title + video.Part + "." + video.Format
-
-		// The system cannot find the path specified.
-		// C:\Users\Administrator\Desktop\千年女子最强音《华夏巾帼志》【茶理理/小缘/肥皂菌/三畿道】.flv
-		// windows 文件名中不能包含 \  /  :  *  ?  "  <  >  |
-		if runtime.GOOS == "windows" {
-			re := regexp.MustCompile(`\/|\\|\:|\*|\?|\"|\<|\>|\|`)
-			videoDownloadFile = re.ReplaceAllString(videoDownloadFile, "、")
-		} else {
-			videoDownloadFile = strings.Replace(videoDownloadFile, `/`, `\/`, -1)
-		}
-	}
-
-	DownloadFile := filepath.Join(cfg.root, videoDownloadFile)
-
-	downloader.SetHeaders(video.DownloadHeaders)
-	downloader.SetMax(video.Size)
-	go downloader.Do(downloadUrl, downloadText, "", DownloadFile, downloadUrls)
-
-	go func() {
-		for {
-			if downloader.Status() || downloader.Error() != nil {
-				if downloader.Error() != nil {
-					fmt.Println(downloader.Error())
-					os.Exit(5)
-				}
-				if downloader.Chan() != nil {
-					close(downloader.Chan())
-				} else {
-					fmt.Println("close of nil channel")
-					os.Exit(5)
-				}
-
-				break
-			}
-			time.Sleep(1000)
-		}
-	}()
-
-	// 等待获取进度条最大值
-	for !downloader.Progress() {
-		time.Sleep(1000)
-	}
-
-	bar := pb.New(downloader.Max()).SetRefreshRate(time.Millisecond * 10)
-	if video.Size != 0 || video.DownloadProtocol == "http" {
-		bar.SetUnits(pb.U_BYTES_DEC)
-	}
-	bar.ShowSpeed = true
-	bar.ShowTimeLeft = true
-	bar.ShowFinalTime = true
-	bar.SetMaxWidth(200)
-	bar.Prefix("Download: [" + path.Base(videoDownloadFile) + "]")
-	bar.Start()
-
-	//
-	for !downloader.INIT() {
-		time.Sleep(1000)
-	}
-
-	for p := range downloader.Chan() {
-		bar.Add(p)
-	}
-	bar.Finish()
-}
+//func main() {
+//	flag.Parse()
+//
+//	// 加载配置文件
+//	configFile := ConfigName()
+//	downloadRoot := DownloadPath()
+//	cfg := NewConfig(configFile, downloadRoot, Cookies)
+//	cfg.Read()
+//
+//	if downloadHost != cfg.root && downloadHost != "" {
+//		cfg.root = downloadHost
+//		cfg.Write()
+//		os.Exit(0)
+//	}
+//
+//	if version {
+//		fmt.Printf("Bogo Version: %v\n", Version)
+//		os.Exit(0)
+//	}
+//
+//	if showWeb {
+//		spiders.ShowWeb()
+//		os.Exit(0)
+//	}
+//
+//	if videoURL == "" {
+//		flag.Usage()
+//		os.Exit(1)
+//	}
+//
+//	cookies := make(map[string]string)
+//	for k, v := range cfg.cookies {
+//		cookies[k] = v
+//	}
+//
+//	if videoShow {
+//		spiders.ShowVideo(videoURL, cookies)
+//		os.Exit(0)
+//	}
+//
+//	video, err := spiders.Do(videoURL, videoQuality, videoID, cookies)
+//	if err != nil {
+//		fmt.Println(err)
+//		os.Exit(2)
+//	}
+//
+//	// 初始化下载器错误
+//	downloader, err := download.LoadDownloader(video.DownloadProtocol)
+//	if err != nil {
+//		fmt.Println(err)
+//		os.Exit(2)
+//	}
+//
+//	if video.DownloadProtocol == "hls" || video.DownloadProtocol == "http" {
+//		downloadUrl = video.Links[0].URL
+//	} else if video.DownloadProtocol == "hlsText" {
+//		downloadText = video.Links[0].URL
+//	} else if video.DownloadProtocol == "httpSegFlv" || video.DownloadProtocol == "httpSegF4v" {
+//		for _, v := range video.Links {
+//			downloadUrls = append(downloadUrls, v.URL)
+//		}
+//	} else {
+//		fmt.Println("did not match to downloader")
+//		os.Exit(3)
+//	}
+//
+//	if videoDownloadFile == "" {
+//		if video.Title == video.Part {
+//			video.Part = ""
+//		} else if video.Part != "" {
+//			video.Part = "-" + video.Part
+//		}
+//		videoDownloadFile = video.Title + video.Part + "." + video.Format
+//
+//		// The system cannot find the path specified.
+//		// C:\Users\Administrator\Desktop\千年女子最强音《华夏巾帼志》【茶理理/小缘/肥皂菌/三畿道】.flv
+//		// windows 文件名中不能包含 \  /  :  *  ?  "  <  >  |
+//		if runtime.GOOS == "windows" {
+//			re := regexp.MustCompile(`\/|\\|\:|\*|\?|\"|\<|\>|\|`)
+//			videoDownloadFile = re.ReplaceAllString(videoDownloadFile, "、")
+//		} else {
+//			videoDownloadFile = strings.Replace(videoDownloadFile, `/`, `\/`, -1)
+//		}
+//	}
+//
+//	DownloadFile := filepath.Join(cfg.root, videoDownloadFile)
+//
+//	downloader.SetHeaders(video.DownloadHeaders)
+//	downloader.SetMax(video.Size)
+//	go downloader.Do(downloadUrl, downloadText, "", DownloadFile, downloadUrls)
+//
+//	go func() {
+//		for {
+//			if downloader.Status() || downloader.Error() != nil {
+//				if downloader.Error() != nil {
+//					fmt.Println(downloader.Error())
+//					os.Exit(5)
+//				}
+//				if downloader.Chan() != nil {
+//					close(downloader.Chan())
+//				} else {
+//					fmt.Println("close of nil channel")
+//					os.Exit(5)
+//				}
+//
+//				break
+//			}
+//			time.Sleep(1000)
+//		}
+//	}()
+//
+//	// 等待获取进度条最大值
+//	for !downloader.Progress() {
+//		time.Sleep(1000)
+//	}
+//
+//	bar := pb.New(downloader.Max()).SetRefreshRate(time.Millisecond * 10)
+//	if video.Size != 0 || video.DownloadProtocol == "http" {
+//		bar.SetUnits(pb.U_BYTES_DEC)
+//	}
+//	bar.ShowSpeed = true
+//	bar.ShowTimeLeft = true
+//	bar.ShowFinalTime = true
+//	bar.SetMaxWidth(200)
+//	bar.Prefix("Download: [" + path.Base(videoDownloadFile) + "]")
+//	bar.Start()
+//
+//	//
+//	for !downloader.INIT() {
+//		time.Sleep(1000)
+//	}
+//
+//	for p := range downloader.Chan() {
+//		bar.Add(p)
+//	}
+//	bar.Finish()
+//}

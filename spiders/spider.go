@@ -1,14 +1,12 @@
 package spiders
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/bndr/gotabulate"
 	"io/ioutil"
 	"net/http"
 	url2 "net/url"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -16,7 +14,7 @@ import (
 
 const UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"
 
-var spiders = []Spiders{
+var Spiders = []Spider{
 	&AcfunIE{},
 	&AcfunBangumiIE{},
 	&BiliBiliIE{},
@@ -29,12 +27,13 @@ var spiders = []Spiders{
 	&YuespIE{},
 }
 
-type Spiders interface {
+type Spider interface {
 	Parse(string) ([]Response, error)
 	SetCookies(string)
 	Pattern() string
 	CookieName() string
 	Name() string
+	Domain() *Cookie
 }
 
 type Response struct {
@@ -59,17 +58,20 @@ type URLAttr struct {
 	Size  int    // 碎片视频大小
 }
 
-type Spider struct {
+type Cookie struct {
+	Name string
+	Enable bool
+	Domain []string
+}
+
+type SpiderIE struct {
 	Cookies      map[string]string
 	CookieString string
 }
 
-func (tv *Spider) Request(method, url string, params url2.Values, data []byte, headers map[string]string) (bytes []byte, err error) {
-
+func (tv *SpiderIE) Request(method, url string, params url2.Values, data []byte, headers map[string]string) (bytes []byte, err error) {
 	client := &http.Client{}
-
 	var req *http.Request
-
 	if method == "GET" || method == "" {
 		if !strings.HasSuffix(url, "?") && len(params) != 0 {
 			url += "?"
@@ -85,11 +87,9 @@ func (tv *Spider) Request(method, url string, params url2.Values, data []byte, h
 
 	// 设置Headers
 	req.Header.Set("User-Agent", UserAgent)
-
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
-
 	// 设置Cookies
 	req.Header.Set("Cookie", tv.CookieString)
 
@@ -112,8 +112,7 @@ func (tv *Spider) Request(method, url string, params url2.Values, data []byte, h
 	return
 }
 
-// 下载网页
-func (tv *Spider) DownloadWebPage(url string, params url2.Values, headers map[string]string) (parse *Parse, err error) {
+func (tv *SpiderIE) DownloadWebPage(url string, params url2.Values, headers map[string]string) (parse *Parse, err error) {
 	bytes, err := tv.Request("GET", url, params, nil, headers)
 	if err != nil {
 		return
@@ -123,40 +122,18 @@ func (tv *Spider) DownloadWebPage(url string, params url2.Values, headers map[st
 	return
 }
 
-func (tv *Spider) SetCookies(cookies string) {
+func (tv *SpiderIE) SetCookies(cookies string) {
 	tv.CookieString = cookies
 	tv.Cookies = splitCookies(cookies)
 }
 
-type Parse struct {
-	Bytes  []byte
-	String string
-}
-
-func NewParse(b []byte) *Parse {
-	return &Parse{
-		Bytes:  b,
-		String: string(b),
-	}
-}
-
-func (p *Parse) Json(data interface{}) (err error) {
-	err = json.Unmarshal(p.Bytes, &data)
-	return
-}
-
-func (p *Parse) Search(pattern string) (strings [][]string, err error) {
-	regex, err := regexp.Compile(pattern)
-	if err != nil {
-		return
-	}
-
-	strings = regex.FindAllStringSubmatch(p.String, -1)
-	return
+// 不需要使用cookie的网站可以不重写这个方法
+func (tv *SpiderIE) Domain() *Cookie {
+	return &Cookie{"", false, []string{}}
 }
 
 func do(r string, cookies map[string]string) (body []Response, err error) {
-	for _, p := range spiders {
+	for _, p := range Spiders {
 		if hasMatch(r, p.Pattern()) {
 			p.SetCookies(cookies[p.CookieName()])
 			body, err = p.Parse(r)
@@ -186,6 +163,18 @@ func do(r string, cookies map[string]string) (body []Response, err error) {
 	err = errors.New("the url is not matched")
 	return
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 func ShowVideo(r string, cookies map[string]string) {
 	body, err := do(r, cookies)
@@ -247,7 +236,7 @@ func ShowVideo(r string, cookies map[string]string) {
 
 func ShowWeb() {
 	fmt.Println()
-	for _, s := range spiders {
+	for _, s := range Spiders {
 		fmt.Println(s.Name())
 	}
 }
@@ -290,3 +279,4 @@ func Do(r, q string, id int, cookies map[string]string) (v Response, err error) 
 	// 如果默认值也取不到, 则取最大码率数据
 	return body[0], nil
 }
+

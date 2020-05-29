@@ -82,7 +82,7 @@ type info struct {
 }
 
 type BiliBiliIE struct {
-	Spider
+	SpiderIE
 }
 
 func (tv *BiliBiliIE) Parse(url string) (body []Response, err error) {
@@ -201,8 +201,8 @@ func (tv *BiliBiliIE) Name() string {
 	return "哔哩哔哩"
 }
 
-func (tv *BiliBiliIE) Domain() string {
-	return "https://www.bilibili.com/"
+func (tv *BiliBiliIE) Domain() *Cookie {
+	return &Cookie{"bilibili", true, []string{".bilibili.com"}}
 }
 
 func (tv *BiliBiliIE) Pattern() string {
@@ -212,7 +212,7 @@ func (tv *BiliBiliIE) Pattern() string {
 // 哔哩哔哩番剧
 
 type BiliBiliBangumiIE struct {
-	Spider
+	SpiderIE
 }
 
 func (tv *BiliBiliBangumiIE) Parse(url string) (body []Response, err error) {
@@ -335,8 +335,8 @@ func (tv *BiliBiliBangumiIE) Name() string {
 	return "哔哩哔哩番剧"
 }
 
-func (tv *BiliBiliBangumiIE) Domain() string {
-	return "https://www.bilibili.com/anime/"
+func (tv *BiliBiliBangumiIE) Domain() *Cookie {
+	return &Cookie{"bilibili",true, []string{".bilibili.com"}}
 }
 
 func (tv *BiliBiliBangumiIE) Pattern() string {

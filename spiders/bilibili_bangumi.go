@@ -7,16 +7,16 @@ import (
 	"strconv"
 )
 
-type BILIBILIBangUmiRequest struct {
-	SpiderRequest
+type BILIBILIBangUmiClient struct {
+	Client
 }
 
-func (cls *BILIBILIBangUmiRequest) Expression() string {
+func (cls *BILIBILIBangUmiClient) Expression() string {
 	return `https?://(?:www\.)?bilibili\.com/bangumi/play/(?:ss|ep)\d+`
 }
 
-func (cls *BILIBILIBangUmiRequest) Args() *SpiderArgs {
-	return &SpiderArgs{
+func (cls *BILIBILIBangUmiClient) Args() *Args {
+	return &Args{
 		"www.bilibili.com",
 		"哔哩哔哩番剧",
 		Cookie{
@@ -27,7 +27,7 @@ func (cls *BILIBILIBangUmiRequest) Args() *SpiderArgs {
 	}
 }
 
-func (cls *BILIBILIBangUmiRequest) Request() (err error) {
+func (cls *BILIBILIBangUmiClient) Request() (err error) {
 	response, err := cls.request(cls.URL, nil)
 	if err != nil {
 		return exception.HTTPHtmlException(err)
@@ -142,12 +142,12 @@ func (cls *BILIBILIBangUmiRequest) Request() (err error) {
 		if len(links) > 1 {
 			protocol = "http"
 		} else if len(links) >= 1 && format == "flv" {
-			protocol = "httpSegFlv"
+			protocol = "flv"
 		} else if len(links) >= 1 && format == "mp4" {
-			protocol = "httpSegMp4"
+			protocol = "ism"
 		}
 
-		cls.Response = append(cls.Response, &SpiderResponse{
+		cls.response = append(cls.response, &Response{
 			ID:               json.Data.Quality,
 			Title:            data.MediaInfo.Title,
 			Part:             part,
@@ -162,16 +162,16 @@ func (cls *BILIBILIBangUmiRequest) Request() (err error) {
 		})
 	}
 
-	key := make(map[int]*SpiderResponse)
-	for _, response := range cls.Response {
+	key := make(map[int]*Response)
+	for _, response := range cls.response {
 		key[response.ID] = response
 	}
 
-	var Response []*SpiderResponse
+	var Response []*Response
 	for _, response := range key {
 		Response = append(Response, response)
 	}
 
-	cls.Response = Response
+	cls.response = Response
 	return
 }

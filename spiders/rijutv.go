@@ -5,26 +5,26 @@ import (
 	"github.com/zhxingy/bogo/exception"
 )
 
-type RIJUTVRequest struct {
-	SpiderRequest
+type RIJUTVClient struct {
+	Client
 }
 
-func (cls *RIJUTVRequest) Expression() string {
+func (cls *RIJUTVClient) Expression() string {
 	// https://www.rijutv.com/player/90485.html
 	// https://www.rijutv.com/player/77181.html
 	// https://www.rijutv.com/player/90494.html
 	return `https://www\.rijutv\.com/player/(?P<id>\d+)\.html`
 }
 
-func (cls *RIJUTVRequest) Args() *SpiderArgs {
-	return &SpiderArgs{
+func (cls *RIJUTVClient) Args() *Args {
+	return &Args{
 		"www.rijutv.com",
 		"日剧TV",
 		Cookie{},
 	}
 }
 
-func (cls *RIJUTVRequest) Request() (err error) {
+func (cls *RIJUTVClient) Request() (err error) {
 	cls.Header.Add("Referer", cls.URL)
 	response, err := cls.request(cls.URL, nil)
 	if err != nil {
@@ -53,14 +53,14 @@ func (cls *RIJUTVRequest) Request() (err error) {
 		return exception.HTMLParseException(err)
 	}
 
-	cls.Response = append(cls.Response, &SpiderResponse{
+	cls.response = append(cls.response, &Response{
 		ID:      1,
 		Title:   title,
 		Part:    part,
 		Format:  "ts",
 		Quality: "720P",
 		Links: []URLAttr{
-			URLAttr{
+			{
 				URL: url,
 			},
 		},

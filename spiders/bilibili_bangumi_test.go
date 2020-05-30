@@ -5,9 +5,9 @@ import (
 	"testing"
 )
 
-func TestBILIBILIBangUmiRequest_Request(t *testing.T) {
-	test := BILIBILIBangUmiRequest{
-		SpiderRequest{
+func TestBILIBILIBangUmiClient_Request(t *testing.T) {
+	test := BILIBILIBangUmiClient{
+		Client{
 			Header: http.Header{},
 			URL:    "https://www.bilibili.com/bangumi/play/ep267851",
 		},

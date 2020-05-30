@@ -5,26 +5,26 @@ import (
 	"github.com/zhxingy/bogo/exception"
 )
 
-type YUESPRequest struct {
-	SpiderRequest
+type YUESPClient struct {
+	Client
 }
 
-func (cls *YUESPRequest) Expression() string {
+func (cls *YUESPClient) Expression() string {
 	// http://www.yuesp.com/play/index6424-1-0.html
 	// http://www.yuesp.com/play/index6424-0-20.html
 	// http://www.yuesp.com/play/index6783-0-0.html
 	return `https?://(?:www\.)?yuesp\.com/play/index(\d+)`
 }
 
-func (cls *YUESPRequest) Args() *SpiderArgs {
-	return &SpiderArgs{
+func (cls *YUESPClient) Args() *Args {
+	return &Args{
 		"www.yuesp.com",
 		"粤视频",
 		Cookie{},
 	}
 }
 
-func (cls *YUESPRequest) Request() (err error) {
+func (cls *YUESPClient) Request() (err error) {
 	response, err := cls.request(cls.URL, nil)
 	if err != nil {
 		return exception.HTTPHtmlException(err)
@@ -64,7 +64,7 @@ func (cls *YUESPRequest) Request() (err error) {
 		return exception.OtherException(errors.New("this tag is not supported " + mark))
 	}
 
-	cls.Response = append(cls.Response, &SpiderResponse{
+	cls.response = append(cls.response, &Response{
 		ID:      1,
 		Title:   title,
 		Part:    part,

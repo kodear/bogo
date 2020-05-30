@@ -6,23 +6,23 @@ import (
 	"strings"
 )
 
-type ACFUNBangUmiRequest struct {
-	SpiderRequest
+type ACFUNBangUmiClient struct {
+	Client
 }
 
-func (cls *ACFUNBangUmiRequest) Expression() string {
+func (cls *ACFUNBangUmiClient) Expression() string {
 	return `https?://(?:www\.)?acfun\.cn/bangumi/`
 }
 
-func (cls *ACFUNBangUmiRequest) Args() *SpiderArgs {
-	return &SpiderArgs{
+func (cls *ACFUNBangUmiClient) Args() *Args {
+	return &Args{
 		"www.acfun.com",
 		"acfun番剧",
 		Cookie{},
 	}
 }
 
-func (cls *ACFUNBangUmiRequest) Request() (err error) {
+func (cls *ACFUNBangUmiClient) Request() (err error) {
 	selector, err := cls.request(cls.URL, nil)
 	if err != nil {
 		return exception.HTTPHtmlException(err)
@@ -58,7 +58,7 @@ func (cls *ACFUNBangUmiRequest) Request() (err error) {
 	}
 
 	for index, v := range currentVideo.AdaptationSet.Representation {
-		cls.Response = append(cls.Response, &SpiderResponse{
+		cls.response = append(cls.response, &Response{
 			ID:     index + 1,
 			Title:  strings.TrimSpace(video.Title),
 			Part:   video.Part,
@@ -66,7 +66,7 @@ func (cls *ACFUNBangUmiRequest) Request() (err error) {
 			Width:  v.Width,
 			Height: v.Height,
 			Links: []URLAttr{
-				URLAttr{
+				{
 					URL: v.Url,
 				},
 			},

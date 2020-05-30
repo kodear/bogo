@@ -14,16 +14,16 @@ import (
 	"time"
 )
 
-type IQIYIRequest struct {
-	SpiderRequest
+type IQIYIClient struct {
+	Client
 }
 
-func (cls *IQIYIRequest) Expression() string {
+func (cls *IQIYIClient) Expression() string {
 	return `https?://(?:www\.)iqiyi\.com/v_(?P<id>[\da-z]+)`
 }
 
-func (cls *IQIYIRequest) Args() *SpiderArgs {
-	return &SpiderArgs{
+func (cls *IQIYIClient) Args() *Args {
+	return &Args{
 		"iqiyi.com.com",
 		"爱奇艺",
 		Cookie{
@@ -33,7 +33,7 @@ func (cls *IQIYIRequest) Args() *SpiderArgs {
 	}
 }
 
-func (cls *IQIYIRequest) Request()(err error) {
+func (cls *IQIYIClient) Request()(err error) {
 	response, err := cls.request(cls.URL, nil)
 	if err != nil {
 		return exception.HTTPHtmlException(err)
@@ -179,7 +179,7 @@ func (cls *IQIYIRequest) Request()(err error) {
 				var urlAttrs []URLAttr
 				if video.M3u8 != "" {
 					format = "ts"
-					protocol = "hlsNative"
+					protocol = "hls_native"
 					urlAttrs = []URLAttr{
 						{
 							URL:   video.M3u8,
@@ -190,7 +190,7 @@ func (cls *IQIYIRequest) Request()(err error) {
 				}else{
 					format = "f4v"
 					if len(video.Fs) > 1 {
-						protocol = "httpSegF4v"
+						protocol = "f4v"
 					} else {
 						protocol = "http"
 					}
@@ -228,7 +228,7 @@ func (cls *IQIYIRequest) Request()(err error) {
 					}
 				}
 
-				cls.Response = append(cls.Response, &SpiderResponse{
+				cls.response = append(cls.response, &Response{
 					ID:               video.Bid,
 					Title:            title,
 					Part:             video.Name,
@@ -252,26 +252,26 @@ func (cls *IQIYIRequest) Request()(err error) {
 		}
 	}
 
-	if len(cls.Response) < 1{
+	if len(cls.response) < 1{
 		return exception.OtherException(errors.New(""))
 	}
 
-	x := make(map[int]*SpiderResponse)
-	for _, response := range cls.Response {
+	x := make(map[int]*Response)
+	for _, response := range cls.response {
 		x[response.ID] = response
 	}
 
-	var Response []*SpiderResponse
+	var Response []*Response
 	for _, response := range x {
 		Response = append(Response, response)
 	}
 
-	cls.Response = Response
+	cls.response = Response
 	return
 
 }
 
-func (cls *IQIYIRequest)authKey(id, tm string)(key string, err error){
+func (cls *IQIYIClient)authKey(id, tm string)(key string, err error){
 	response, err := cls.request("http://111.59.199.42:9999/authKey?", url.Values{
 		"tvid": []string{id},
 		"tm": []string{tm},
@@ -284,7 +284,7 @@ func (cls *IQIYIRequest)authKey(id, tm string)(key string, err error){
 	return
 }
 
-func (cls *IQIYIRequest)cmd5x(oldUrl string)(newUrl string, err error){
+func (cls *IQIYIClient)cmd5x(oldUrl string)(newUrl string, err error){
 	response, err := cls.request("http://111.59.199.42:9999/vf?", url.Values{"url": []string{base64.StdEncoding.EncodeToString([]byte(oldUrl))}})
 	if err != nil{
 		return
@@ -294,7 +294,7 @@ func (cls *IQIYIRequest)cmd5x(oldUrl string)(newUrl string, err error){
 	return
 }
 
-func (cls *IQIYIRequest)f4v(key string)(sign string, err error){
+func (cls *IQIYIClient)f4v(key string)(sign string, err error){
 	response, err := cls.request("http://111.59.199.42:9999/f4v", url.Values{"sign": []string{key}})
 	if err != nil{
 		return

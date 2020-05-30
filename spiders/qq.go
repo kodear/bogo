@@ -13,16 +13,16 @@ import (
 	"time"
 )
 
-type QQRequest struct {
-	SpiderRequest
+type QQClient struct {
+	Client
 }
 
-func (cls *QQRequest) Expression() string {
+func (cls *QQClient) Expression() string {
 	return `https?://(?:v\.|www\.)?qq\.(com|cn)/x/(?:cover|page)/(?:[a-z\d]+/)?(?P<id>[a-z\d]+)`
 }
 
-func (cls *QQRequest) Args() *SpiderArgs {
-	return &SpiderArgs{
+func (cls *QQClient) Args() *Args {
+	return &Args{
 		"v.qq.com.com",
 		"腾讯视频",
 		Cookie{
@@ -32,7 +32,7 @@ func (cls *QQRequest) Args() *SpiderArgs {
 	}
 }
 
-func (cls *QQRequest) Request() (err error) {
+func (cls *QQClient) Request() (err error) {
 	response, err := cls.request(cls.URL, nil)
 	if err != nil {
 		return exception.HTTPHtmlException(err)
@@ -141,7 +141,7 @@ func (cls *QQRequest) Request() (err error) {
 
 		response, err := cls.fromRequest("https://vd.l.qq.com/proxyhttp", nil, body)
 		if err != nil {
-			if index < 3 || len(cls.Response) > 0{
+			if index < 3 || len(cls.response) > 0{
 				continue
 			}else {
 				return exception.HTTPJsonException(err)
@@ -154,14 +154,14 @@ func (cls *QQRequest) Request() (err error) {
 		}
 		err = response.Json(&vjson)
 		if err != nil {
-			if index < 3 || len(cls.Response) > 0{
+			if index < 3 || len(cls.response) > 0{
 				continue
 			}else {
 				return exception.JSONParseException(err)
 			}
 		}
 		if vjson.ErrCode != 0 {
-			if index < 3 || len(cls.Response) > 0{
+			if index < 3 || len(cls.response) > 0{
 				continue
 			}else {
 				return exception.ServerAuthException(errors.New("qq video code: " + strconv.Itoa(vjson.ErrCode)))
@@ -204,7 +204,7 @@ func (cls *QQRequest) Request() (err error) {
 		}
 
 		if video.Msg != "" {
-			if index < 3 || len(cls.Response) > 0{
+			if index < 3 || len(cls.response) > 0{
 				continue
 			}else{
 				return exception.ServerAuthException(errors.New(video.Msg))
@@ -235,7 +235,7 @@ func (cls *QQRequest) Request() (err error) {
 			link = video.Vl.Vi[0].Ul.Ui[0].URL
 		}
 
-		cls.Response = append(cls.Response, &SpiderResponse{
+		cls.response = append(cls.response, &Response{
 			ID:         id,
 			Title:      video.Vl.Vi[0].Ti,
 			Part:       "",
@@ -247,7 +247,7 @@ func (cls *QQRequest) Request() (err error) {
 			StreamType: streamType,
 			Quality:    quality,
 			Links: []URLAttr{
-				URLAttr{
+				{
 					URL:   link,
 					Order: 0,
 					Size:  video.Vl.Vi[0].Fs,
@@ -260,7 +260,7 @@ func (cls *QQRequest) Request() (err error) {
 	return
 }
 
-func (cls *QQRequest) guid() string {
+func (cls *QQClient) guid() string {
 	var uid string
 	rand.Seed(time.Now().UnixNano())
 	for i := 1; i <= 32; i++ {
@@ -269,7 +269,7 @@ func (cls *QQRequest) guid() string {
 	return uid
 }
 
-func (cls *QQRequest) sign(t string) int {
+func (cls *QQClient) sign(t string) int {
 	e := 0
 	n := len(t)
 	i := 5381

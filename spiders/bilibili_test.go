@@ -5,9 +5,9 @@ import (
 	"testing"
 )
 
-func TestBILIBILIRequest_Request(t *testing.T) {
-	test := BILIBILIRequest{
-		SpiderRequest{
+func TestBILIBILIClient_Request(t *testing.T) {
+	test := BILIBILIClient{
+		Client{
 			Header: http.Header{},
 			URL:    "https://www.bilibili.com/video/BV1jJ411c7s3?p=20",
 		},

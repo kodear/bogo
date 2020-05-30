@@ -7,23 +7,23 @@ import (
 	"strings"
 )
 
-type ACFUNRequest struct {
-	SpiderRequest
+type ACFUNClient struct {
+	Client
 }
 
-func (cls *ACFUNRequest) Expression() string {
+func (cls *ACFUNClient) Expression() string {
 	return `https?://(?:www\.)?acfun\.cn/v/ac\d+`
 }
 
-func (cls *ACFUNRequest) Args() *SpiderArgs {
-	return &SpiderArgs{
+func (cls *ACFUNClient) Args() *Args {
+	return &Args{
 		"www.acfun.com",
 		"acfun",
 		Cookie{},
 	}
 }
 
-func (cls *ACFUNRequest) Request() (err error) {
+func (cls *ACFUNClient) Request() (err error) {
 	x, err := cls.request(cls.URL, nil)
 	if err != nil {
 		return exception.HTTPHtmlException(err)
@@ -64,7 +64,7 @@ func (cls *ACFUNRequest) Request() (err error) {
 	}
 
 	for index, v := range currentVideo.AdaptationSet.Representation {
-		cls.Response = append(cls.Response, &SpiderResponse{
+		cls.response = append(cls.response, &Response{
 			ID:     index + 1,
 			Title:  strings.TrimSpace(video.Title),
 			Part:   video.CurrentVideoInfo.Part,
@@ -72,7 +72,7 @@ func (cls *ACFUNRequest) Request() (err error) {
 			Width:  v.Width,
 			Height: v.Height,
 			Links: []URLAttr{
-				URLAttr{
+				{
 					URL: v.Url,
 				},
 			},

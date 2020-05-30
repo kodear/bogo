@@ -5,9 +5,9 @@ import (
 	"testing"
 )
 
-func TestACFUNRequest_Request(t *testing.T) {
-	test := ACFUNRequest{
-		SpiderRequest{
+func TestACFUNClient_Request(t *testing.T) {
+	test := ACFUNClient{
+		Client{
 			Header: http.Header{},
 			URL:    "https://www.acfun.cn/v/ac15533372",
 		},

@@ -8,16 +8,16 @@ import (
 	"strconv"
 )
 
-type YOUKURequest struct {
-	SpiderRequest
+type YOUKUClient struct {
+	Client
 }
 
-func (cls *YOUKURequest) Expression() string {
+func (cls *YOUKUClient) Expression() string {
 	return `https?://(?:v\.|player\.|video\.)?(?:youku|tudou)\.com/(?:v_show|v_nextstage|embed|v)/(?:id_)?(?P<vid>[a-zA-Z\d]+={0,2})`
 }
 
-func (cls *YOUKURequest) Args() *SpiderArgs {
-	return &SpiderArgs{
+func (cls *YOUKUClient) Args() *Args {
+	return &Args{
 		"www.youku.com",
 		"优酷视频",
 		Cookie{
@@ -28,7 +28,7 @@ func (cls *YOUKURequest) Args() *SpiderArgs {
 	}
 }
 
-func (cls *YOUKURequest) Request() (err error) {
+func (cls *YOUKUClient) Request() (err error) {
 	var vid string
 	var x selector.Selector
 	x = []byte(cls.URL)
@@ -99,7 +99,7 @@ func (cls *YOUKURequest) Request() (err error) {
 			}
 		}
 
-		cls.Response = append(cls.Response, &SpiderResponse{
+		cls.response = append(cls.response, &Response{
 			ID:         id + 1,
 			Title:      json.Data.Show.Title,
 			Part:       strconv.Itoa(json.Data.Show.Stage),

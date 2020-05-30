@@ -5,9 +5,9 @@ import (
 	"testing"
 )
 
-func TestACFUNBangUmiRequest_Request(t *testing.T) {
-	test := ACFUNBangUmiRequest{
-		SpiderRequest{
+func TestACFUNBangUmiClient_Request(t *testing.T) {
+	test := ACFUNBangUmiClient{
+		Client{
 			Header: http.Header{},
 			URL:    "https://www.acfun.cn/bangumi/aa6002267",
 		},

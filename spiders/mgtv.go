@@ -12,19 +12,19 @@ import (
 	"time"
 )
 
-type MGTVRequest struct {
-	SpiderRequest
+type MGTVClient struct {
+	Client
 }
 
-func (cls *MGTVRequest) Expression() string {
+func (cls *MGTVClient) Expression() string {
 	// https://www.mgtv.com/b/332228/6589904.html?fpa=55&fpos=2
 	// https://www.mgtv.com/b/304167/3971620.html
 	// https://www.mgtv.com/l/99999286/6607635.html?fpa=1173&fpos=2
 	return `https?://(?:www\.)?mgtv\.com/(?:b|l)/\d+/(?P<id>\d+)`
 }
 
-func (cls *MGTVRequest) Args() *SpiderArgs {
-	return &SpiderArgs{
+func (cls *MGTVClient) Args() *Args {
+	return &Args{
 		"www.mgtv.com",
 		"芒果TV",
 		Cookie{
@@ -35,7 +35,7 @@ func (cls *MGTVRequest) Args() *SpiderArgs {
 	}
 }
 
-func (cls *MGTVRequest) Request() (err error) {
+func (cls *MGTVClient) Request() (err error) {
 	var vid string
 	var x selector.Selector
 	x = []byte(cls.URL)
@@ -141,7 +141,7 @@ func (cls *MGTVRequest) Request() (err error) {
 
 		id, _ := strconv.Atoi(stream.Def)
 		duration, _ := strconv.Atoi(auth.Data.Info.Duration)
-		cls.Response = append(cls.Response, &SpiderResponse{
+		cls.response = append(cls.response, &Response{
 			ID:         id,
 			Title:      auth.Data.Info.Title,
 			Part:       auth.Data.Info.Series,
@@ -162,7 +162,7 @@ func (cls *MGTVRequest) Request() (err error) {
 	return
 }
 
-func (cls *MGTVRequest) sign() string {
+func (cls *MGTVClient) sign() string {
 	str := fmt.Sprintf("did=aaaa|pno=1030|ver=0.3.0301|clit=%d", int(time.Now().Unix()))
 	b64str := base64.StdEncoding.EncodeToString([]byte(str))
 	newB64str := strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(b64str, "+", "-"), "/", "~"), "=", "-")

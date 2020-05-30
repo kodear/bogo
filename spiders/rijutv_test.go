@@ -5,9 +5,9 @@ import (
 	"testing"
 )
 
-func TestRIJUTVRequest_Request(t *testing.T) {
-	test := RIJUTVRequest{
-		SpiderRequest{
+func TestRIJUTVClient_Request(t *testing.T) {
+	test := RIJUTVClient{
+		Client{
 			Header: http.Header{},
 			URL:    "https://www.rijutv.com/player/99347.html",
 		},

@@ -8,16 +8,16 @@ import (
 	"strconv"
 )
 
-type BILIBILIRequest struct {
-	SpiderRequest
+type BILIBILIClient struct {
+	Client
 }
 
-func (cls *BILIBILIRequest) Expression() string {
+func (cls *BILIBILIClient) Expression() string {
 	return `https?://(?:www\.)?bilibili\.com/video/[A-Za-z\d]+`
 }
 
-func (cls *BILIBILIRequest) Args() *SpiderArgs {
-	return &SpiderArgs{
+func (cls *BILIBILIClient) Args() *Args {
+	return &Args{
 		"www.bilibili.com",
 		"哔哩哔哩",
 		Cookie{
@@ -28,7 +28,7 @@ func (cls *BILIBILIRequest) Args() *SpiderArgs {
 	}
 }
 
-func (cls *BILIBILIRequest) Request() (err error) {
+func (cls *BILIBILIClient) Request() (err error) {
 	response, err := cls.request(cls.URL, nil)
 	if err != nil {
 		return exception.HTTPHtmlException(err)
@@ -153,12 +153,12 @@ func (cls *BILIBILIRequest) Request() (err error) {
 		if len(links) > 1 {
 			protocol = "http"
 		} else if len(links) >= 1 && format == "flv" {
-			protocol = "httpSegFlv"
+			protocol = "flv"
 		} else if len(links) >= 1 && format == "mp4" {
-			protocol = "httpSegMp4"
+			protocol = "ism"
 		}
 
-		cls.Response = append(cls.Response, &SpiderResponse{
+		cls.response = append(cls.response, &Response{
 			ID:               json.Data.Quality,
 			Title:            data.VideoData.Title,
 			Part:             part,
@@ -175,17 +175,17 @@ func (cls *BILIBILIRequest) Request() (err error) {
 		})
 	}
 
-	key := make(map[int]*SpiderResponse)
-	for _, response := range cls.Response {
+	key := make(map[int]*Response)
+	for _, response := range cls.response {
 		key[response.ID] = response
 	}
 
-	var Response []*SpiderResponse
+	var Response []*Response
 	for _, response := range key {
 		Response = append(Response, response)
 	}
 
-	cls.Response = Response
+	cls.response = Response
 	return
 
 }

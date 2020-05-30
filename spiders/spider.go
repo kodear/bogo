@@ -1,37 +1,19 @@
 package spiders
 
 import (
-	"errors"
-	"fmt"
-	"github.com/bndr/gotabulate"
+	"bytes"
+	"github.com/zhxingy/bogo/selector"
 	"io/ioutil"
 	"net/http"
-	url2 "net/url"
-	"sort"
-	"strconv"
-	"strings"
+	"net/url"
 )
 
 const UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"
 
-var Spiders = []Spider{
-	//&BiliBiliIE{},
-	//&BiliBiliBangumiIE{},
-	//&IqiyiIE{},
-	//&TencentIE{},
-	//&MgtvIE{},
-	//&YouKuIE{},
-	//&RiJuTvIE{},
-	//&YuespIE{},
-}
-
-type Spider interface {
-	Parse(string) ([]Response, error)
-	SetCookies(string)
-	Pattern() string
-	CookieName() string
-	Name() string
-	Domain() *Cookie
+type URLAttr struct {
+	URL   string //碎片下载地址
+	Order int    //碎片视频排序
+	Size  int    // 碎片视频大小
 }
 
 type Response struct {
@@ -50,10 +32,94 @@ type Response struct {
 	DownloadProtocol string            //视频下载协议
 }
 
-type URLAttr struct {
-	URL   string //碎片下载地址
-	Order int    //碎片视频排序
-	Size  int    // 碎片视频大小
+type Client struct {
+	URL       string
+	Proxy     string
+	Header    http.Header
+	CookieJar CookiesJar
+	response  []*Response
+}
+
+type Args struct {
+	Domain string // 网站首页
+	Name   string // 项目名
+	Cookie Cookie
+}
+
+func (cls *Client) request(uri string, params url.Values) (selector selector.Selector, err error) {
+	client := &http.Client{}
+	req, err := http.NewRequest("", uri+params.Encode(), nil)
+	if err != nil {
+		return
+	}
+
+	// 构造请求头
+	req.Header = cls.Header
+	req.Header.Set("User-Agent", UserAgent)
+	// 构造cookie
+	for _, cookie := range cls.CookieJar {
+		req.AddCookie(cookie)
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		return
+	}
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	selector = body
+	return
+}
+
+func (cls *Client) fromRequest(uri string, params url.Values, data []byte) (selector selector.Selector, err error) {
+	client := &http.Client{}
+
+	req, err := http.NewRequest("POST", uri+params.Encode(), bytes.NewReader(data))
+	if err != nil {
+		return
+	}
+
+	// 构造请求头
+	req.Header = cls.Header
+	req.Header.Set("User-Agent", UserAgent)
+	// 构造cookie
+	for _, cookie := range cls.CookieJar {
+		req.AddCookie(cookie)
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		return
+	}
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	selector = body
+	return
+}
+
+func (cls *Client) Expression() string {
+	panic("you have to rewrite the method")
+}
+
+func (cls *Client) Request() (err error) {
+	panic("you have to rewrite the method")
+}
+
+func (cls *Client) Response() []*Response{
+	return cls.response
+
+}
+
+func (cls *Client) Args() *Args {
+	panic("you have to rewrite the method")
 }
 
 type Cookie struct {
@@ -62,206 +128,46 @@ type Cookie struct {
 	Domain []string
 }
 
-type SpiderIE struct {
-	Cookies      map[string]string
-	CookieString string
+type CookiesJar []*http.Cookie
+
+func (cls *CookiesJar) Name(key string) (value string) {
+	for _, cookie := range *cls {
+		if cookie.Name == key {
+			value = cookie.Value
+			break
+		}
+	}
+	return value
 }
 
-func (tv *SpiderIE) Request(method, url string, params url2.Values, data []byte, headers map[string]string) (bytes []byte, err error) {
-	client := &http.Client{}
-	var req *http.Request
-	if method == "GET" || method == "" {
-		if !strings.HasSuffix(url, "?") && len(params) != 0 {
-			url += "?"
+func (cls *CookiesJar) SetValue(key, value string) {
+	var ok bool
+	for _, cookie := range *cls {
+		if cookie.Name == key {
+			cookie.Value = value
+			ok = true
+			break
 		}
-		req, err = http.NewRequest("GET", url+params.Encode(), nil)
-	} else if method == "POST" {
-		req, err = http.NewRequest("POST", url, strings.NewReader(string(data)))
 	}
 
-	if err != nil {
-		return
+	if !ok {
+		*cls = append(*cls, &http.Cookie{
+			Name:  key,
+			Value: value,
+		})
 	}
 
-	// 设置Headers
-	req.Header.Set("User-Agent", UserAgent)
-	for key, value := range headers {
-		req.Header.Set(key, value)
-	}
-	// 设置Cookies
-	req.Header.Set("Cookie", tv.CookieString)
+}
 
-	// 发送请求
-	res, err := client.Do(req)
-	if err != nil {
-		return
+func (cls *CookiesJar) String ()(cookies string){
+	for _, cookie := range *cls {
+		cookies += cookie.Name + "=" + cookie.Value + ";"
 	}
-
-	if res.StatusCode != 200 {
-		err = errors.New("response code " + strconv.Itoa(res.StatusCode))
-		return
-	}
-
-	bytes, err = ioutil.ReadAll(res.Body)
-	if err == nil {
-		_ = res.Body.Close()
-	}
-
 	return
 }
 
-func (tv *SpiderIE) DownloadWebPage(url string, params url2.Values, headers map[string]string) (parse *Parse, err error) {
-	bytes, err := tv.Request("GET", url, params, nil, headers)
-	if err != nil {
-		return
-	}
-
-	parse = NewParse(bytes)
-	return
-}
-
-func (tv *SpiderIE) SetCookies(cookies string) {
-	tv.CookieString = cookies
-	tv.Cookies = splitCookies(cookies)
-}
-
-// 不需要使用cookie的网站可以不重写这个方法
-func (tv *SpiderIE) Domain() *Cookie {
-	return &Cookie{"", false, []string{}}
-}
-
-func do(r string, cookies map[string]string) (body []Response, err error) {
-	for _, p := range Spiders {
-		if hasMatch(r, p.Pattern()) {
-			p.SetCookies(cookies[p.CookieName()])
-			body, err = p.Parse(r)
-			if err != nil {
-				return
-			}
-			if len(body) == 0 {
-				err = errors.New("unauthorized access")
-				return
-			}
-			sort.Sort(Sort{body, func(x, y Response) bool {
-				if x.Size != y.Size {
-					return x.Size > y.Size
-				}
-				if x.Height != y.Height {
-					return x.Height > y.Height
-				}
-				if x.Width != y.Width {
-					return x.Width > y.Width
-				}
-				return false
-			}})
-			return
-		}
-	}
-
-	err = errors.New("the url is not matched")
-	return
-}
-
-func ShowVideo(r string, cookies map[string]string) {
-	body, err := do(r, cookies)
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		var p [][]string
-		for _, q := range body {
-			var part string
-			if q.Part == "" {
-				part = "-"
-			} else {
-				part = q.Part
-			}
-
-			var streamType string
-			if q.StreamType == "" {
-				streamType = "-"
-			} else {
-				streamType = q.StreamType
-			}
-
-			var size string
-			if q.Size == 0 {
-				size = "-"
-			} else {
-				size = strconv.Itoa(q.Size)
-			}
-
-			var duration string
-			if q.Duration == 0 {
-				duration = "-"
-			} else {
-				duration = strconv.Itoa(q.Duration)
-			}
-
-			var width string
-			if q.Width == 0 {
-				width = "-"
-			} else {
-				width = strconv.Itoa(q.Width)
-			}
-
-			var height string
-			if q.Height == 0 {
-				height = "-"
-			} else {
-				height = strconv.Itoa(q.Height)
-			}
-
-			p = append(p, []string{strconv.Itoa(q.ID), q.Title, part, q.Format, streamType, q.Quality, width, height, duration, size, q.DownloadProtocol})
-		}
-
-		tabulate := gotabulate.Create(p)
-		tabulate.SetHeaders([]string{"ID", "Title", "Part", "Format", "StreamType", "Quality", "Width", "Height", "Duration", "Size", "DownloadProtocol"})
-		fmt.Println(tabulate.Render("simple"))
-	}
-}
-
-func ShowWeb() {
-	fmt.Println()
-	for _, s := range Spiders {
-		fmt.Println(s.Name())
-	}
-}
-
-func Do(r, q string, id int, cookies map[string]string) (v Response, err error) {
-	body, err := do(r, cookies)
-	if err != nil {
-		return
-	}
-
-	if len(body) == 1 {
-		return body[0], nil
-	}
-
-	// 根据ID取数据
-	if id != 0 {
-		for _, u := range body {
-			if u.ID == id {
-				return u, nil
-			}
-		}
-	}
-
-	// 没有匹配到ID, 根据视频质量取数据
-	if q != "" {
-		for _, u := range body {
-			if strings.Contains(u.Quality, q) {
-				return u, nil
-			}
-		}
-	}
-
-	// 都没有匹配到, 取默认值, 默认720P
-	for _, u := range body {
-		if strings.Contains(u.Quality, "720") {
-			return u, nil
-		}
-	}
-
-	// 如果默认值也取不到, 则取最大码率数据
-	return body[0], nil
+type Spider interface {
+	Request()error
+	Response() []*Response
+	Expression() string
 }

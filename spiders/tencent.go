@@ -267,7 +267,7 @@ func (tv *TencentIE) Name() string {
 }
 
 func (tv *TencentIE) Domain() *Cookie {
-	return &Cookie{"tencent",true, []string{".qq.com", ".video.qq.com"}}
+	return &Cookie{"tencent", true, []string{".qq.com", ".video.qq.com"}}
 }
 
 func (tv *TencentIE) Pattern() string {

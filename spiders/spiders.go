@@ -2,11 +2,11 @@ package spiders
 
 import (
 	"bytes"
-	"encoding/json"
-	"github.com/zhxingy/bogo/exception"
+	"github.com/zhxingy/bogo/selector"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"regexp"
 )
 
 type SpiderResponse struct {
@@ -26,98 +26,137 @@ type SpiderResponse struct {
 }
 
 type SpiderRequest struct {
-	URL     string
-	Proxy  	string
-	Header http.Header
-	CookieJar []*http.Cookie
-	Response  *SpiderResponse
+	URL       string
+	Proxy     string
+	Header    http.Header
+	CookieJar SpiderCookiesJar
+	Response  []*SpiderResponse
 }
 
-func (cls *SpiderRequest)request(uri string, params url.Values)(body []byte, err error){
+type SpiderArgs struct {
+	Domain string // 网站首页
+	Name   string // 项目名
+	Cookie struct {
+		Name   string   //  cookie key(用于配置文件)
+		Enable bool     // 是否启用cookie
+		Domain []string // cookie域
+	}
+}
+
+func (cls *SpiderRequest) request(uri string, params url.Values) (selector selector.Selector, err error) {
 	client := &http.Client{}
-	req, err := http.NewRequest("", uri + params.Encode(), nil)
-	if err != nil{
-		return
-	}
-	req = cls.setRequest(req)
-
-	res, err := client.Do(req)
-	if res != nil{
+	req, err := http.NewRequest("", uri+params.Encode(), nil)
+	if err != nil {
 		return
 	}
 
-	body, err = ioutil.ReadAll(req.Body)
-	if err != nil{
-		return
-	}
-
-	return
-}
-
-func (cls *SpiderRequest)fromRequest(uri string, params url.Values, data []byte)(body []byte, err error){
-	client := &http.Client{}
-	req, err := http.NewRequest("POST", uri + params.Encode(), bytes.NewBuffer(data))
-	if err != nil{
-		return
-	}
-	req = cls.setRequest(req)
-
-	res, err := client.Do(req)
-	if res != nil{
-		return
-	}
-
-	body, err = ioutil.ReadAll(req.Body)
-	if err != nil{
-		return
-	}
-
-	return
-}
-
-func (cls *SpiderRequest)setRequest(req *http.Request) *http.Request{
 	// 构造请求头
 	req.Header = cls.Header
 	req.Header.Set("User-Agent", UserAgent)
 	// 构造cookie
-	for _, cookie := range cls.CookieJar{
+	for _, cookie := range cls.CookieJar {
 		req.AddCookie(cookie)
 	}
-	return req
+
+	res, err := client.Do(req)
+	if err != nil {
+		return
+	}
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	selector = body
+	return
 }
 
-func (cls *SpiderRequest)downloadWeb(uri string, params url.Values)error{
-	_, err := cls.request(uri, params)
-	if err != nil{
-		return exception.HTTPHtmlException(err)
+func (cls *SpiderRequest) fromRequest(uri string, params url.Values, data []byte) (selector selector.Selector, err error) {
+	client := &http.Client{}
+
+	req, err := http.NewRequest("POST", uri+params.Encode(), bytes.NewReader(data))
+	if err != nil {
+		return
 	}
-	return nil
+
+	// 构造请求头
+	req.Header = cls.Header
+	req.Header.Set("User-Agent", UserAgent)
+	// 构造cookie
+	for _, cookie := range cls.CookieJar {
+		req.AddCookie(cookie)
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		return
+	}
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	selector = body
+	return
 }
 
-func (cls *SpiderRequest)downloadJson(uri string, params url.Values, v interface{})error{
-	body, err := cls.request(uri, params)
-	if err != nil{
-		return exception.HTTPJsonException(err)
-	}
-
-	err = json.Unmarshal(body, v)
-	if err != nil{
-		return exception.JSONParseException(err)
-	}
-
-	return nil
+func (cls *SpiderRequest) Expression() string {
+	panic("you have to rewrite the method")
 }
 
-func (cls *SpiderRequest)fromDownloadJson(uri string, params url.Values, data []byte, v interface{})error{
-	body, err := cls.fromRequest(uri, params, data)
-	if err != nil{
-		return exception.HTTPJsonException(err)
+func (cls *SpiderRequest) Request() (err error) {
+	panic("you have to rewrite the method")
+}
+
+func (cls *SpiderRequest) Args() *SpiderArgs {
+	panic("you have to rewrite the method")
+}
+
+func Match(uri, expression string) bool {
+	ok, err := regexp.MatchString(expression, uri)
+	if err != nil {
+		return false
+	} else {
+		return ok
+	}
+}
+
+type SpiderCookiesJar []*http.Cookie
+
+func (cls *SpiderCookiesJar) Name(key string) (value string) {
+	for _, cookie := range *cls {
+		if cookie.Name == key {
+			value = cookie.Value
+			break
+		}
+	}
+	return value
+}
+
+func (cls *SpiderCookiesJar) SetValue(key, value string) {
+	var ok bool
+	for _, cookie := range *cls {
+		if cookie.Name == key {
+			cookie.Value = value
+			ok = true
+			break
+		}
 	}
 
-	err = json.Unmarshal(body, v)
-	if err != nil{
-		return exception.JSONParseException(err)
+	if !ok {
+		*cls = append(*cls, &http.Cookie{
+			Name:  key,
+			Value: value,
+		})
 	}
 
-	return nil
+}
+
+func (cls *SpiderCookiesJar) String ()(cookies string){
+	for _, cookie := range *cls {
+		cookies += cookie.Name + "=" + cookie.Value + ";"
+	}
+	return
 }

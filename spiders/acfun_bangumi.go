@@ -2,49 +2,43 @@ package spiders
 
 import (
 	"encoding/json"
-	"errors"
 	"github.com/zhxingy/bogo/exception"
 	"strings"
 )
 
-type ACFUNRequest struct {
+type ACFUNBangUmiRequest struct {
 	SpiderRequest
 }
 
-func (cls *ACFUNRequest) Expression() string {
-	return `https?://(?:www\.)?acfun\.cn/v/ac\d+`
+func (cls *ACFUNBangUmiRequest) Expression() string {
+	return `https?://(?:www\.)?acfun\.cn/bangumi/`
 }
 
-func (cls *ACFUNRequest) Args() *SpiderArgs {
+func (cls *ACFUNBangUmiRequest) Args() *SpiderArgs {
 	return &SpiderArgs{
 		"www.acfun.com",
-		"acfun",
+		"acfun番剧",
 		Cookie{},
 	}
 }
 
-func (cls *ACFUNRequest) Request() (err error) {
-	x, err := cls.request(cls.URL, nil)
+func (cls *ACFUNBangUmiRequest) Request() (err error) {
+	selector, err := cls.request(cls.URL, nil)
 	if err != nil {
 		return exception.HTTPHtmlException(err)
 	}
 
 	var video struct {
-		Result           int    `json:"result"`
-		Title            string `json:"title"`
+		Title            string `json:"bangumiTitle"`
+		Part             string `json:"episodeName"`
 		CurrentVideoInfo struct {
-			Part           string  `json:"title"`
 			DurationMillis float32 `json:"durationMillis"`
 			KsPlayJson     string  `json:"ksPlayJson"`
 		} `json:"currentVideoInfo"`
 	}
-	err = x.ReByJson(`window.videoInfo = (\{.*\});`, &video)
+	err = selector.ReByJson(`window.bangumiData = (\{.*\});`, &video)
 	if err != nil {
 		return err
-	}
-
-	if video.Result != 0 {
-		return exception.ServerAuthException(errors.New(""))
 	}
 
 	var currentVideo struct {
@@ -67,7 +61,7 @@ func (cls *ACFUNRequest) Request() (err error) {
 		cls.Response = append(cls.Response, &SpiderResponse{
 			ID:     index + 1,
 			Title:  strings.TrimSpace(video.Title),
-			Part:   video.CurrentVideoInfo.Part,
+			Part:   video.Part,
 			Format: "ts",
 			Width:  v.Width,
 			Height: v.Height,

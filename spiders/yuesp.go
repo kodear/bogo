@@ -2,94 +2,81 @@ package spiders
 
 import (
 	"errors"
-	url2 "net/url"
-	"path/filepath"
+	"github.com/zhxingy/bogo/exception"
 )
 
-type YuespIE struct {
-	SpiderIE
+type YUESPRequest struct {
+	SpiderRequest
 }
 
-func (tv *YuespIE) CookieName() string {
-	return "yuesp"
-}
-
-func (tv *YuespIE) Name() string {
-	return "yuesp"
-}
-
-
-func (tv *YuespIE) Pattern() string {
+func (cls *YUESPRequest) Expression() string {
 	// http://www.yuesp.com/play/index6424-1-0.html
 	// http://www.yuesp.com/play/index6424-0-20.html
 	// http://www.yuesp.com/play/index6783-0-0.html
 	return `https?://(?:www\.)?yuesp\.com/play/index(\d+)`
 }
 
-func (tv *YuespIE) Parse(url string) (body []Response, err error) {
-	response, err := tv.DownloadWebPage(url, url2.Values{}, map[string]string{})
+func (cls *YUESPRequest) Args() *SpiderArgs {
+	return &SpiderArgs{
+		"www.yuesp.com",
+		"粤视频",
+		Cookie{},
+	}
+}
+
+func (cls *YUESPRequest) Request() (err error) {
+	response, err := cls.request(cls.URL, nil)
 	if err != nil {
-		return
+		return exception.HTTPHtmlException(err)
 	}
 
-	//<script>var now="http://cx.anna.run/yunmp4/8150324273603888.mp4";var pn="tybf";
-	matchResult, err := response.Search(`<script>var now="(.*)";var pn="(.*)"; var next`)
-	if len(matchResult) == 0 || len(matchResult[0]) < 3 {
-		err = errors.New("parse web page error")
-		return
+	var title, part, mark, newUrl, url, protocol, format string
+
+	err = response.Re(`<script>var now="(.*)";var pn="(.*)"; var next`, &newUrl, &mark)
+	if err != nil {
+		return exception.HTMLParseException(err)
 	}
 
-	newURL := matchResult[0][1]
-	mark := matchResult[0][2]
-
-	// 获取Title, Part
-	// var playn='法证先锋4粤语版', playp='第1集', playerh
-	title := filepath.Base(url)
-	part := ""
-	matchResult, err = response.Search(`var playn='(.*)', playp='(.*)', playerh`)
-	if len(matchResult) > 0 && len(matchResult[0]) >= 3 {
-		title = matchResult[0][1]
-		part = matchResult[0][2]
+	err = response.Re(`var playn='(.*)', playp='(.*)', playerh`, &title, &part)
+	if err != nil {
+		return exception.HTMLParseException(err)
 	}
 
-	var downloadURL string
-	var downloadProtocol string
 	if mark == "tybf" {
-		response, err = tv.DownloadWebPage(newURL, url2.Values{}, map[string]string{"User-Agent": UserAgent, "Referer": url})
+		cls.Header.Add("Referer", cls.URL)
+		response, err = cls.request(newUrl, nil)
 		if err != nil {
-			return
+			return exception.HTTPHtmlException(err)
 		}
 
-		// 搜索播放地址
-		// var url = 'https://cloud189-shzh-person.oos-gdsz.ctyunapi.cn/456b0df9-c794-4b9b-8d7b-f4e44651bb7d?x-amz-UFID=8150324273603888&x-amz-CLIENTNETWORK=UNKNOWN&x-amz-FSIZE=390231279&response-content-type=video/mp4&Expires=1584455504&x-amz-UID=330954580&response-content-disposition=attachment%3Bfilename%3D%22%255BYueSP.COM%255D%25E6%2596%25B0%25E5%25B0%2581%25E7%25A5%259E%25E6%25BC%2594%25E4%25B9%258902.mp4%22&AWSAccessKeyId=18bd696e8df5d7a48893&x-amz-limitrate=5120&x-amz-CLOUDTYPEIN=PERSON&x-amz-CLIENTTYPEIN=WEB&Signature=Ug3X6SOevZtLZkSB2HK55ecYXQs%3D'；
-		matchResult, err = response.Search(`var url = '(.*)';`)
-		if len(matchResult) == 0 || len(matchResult[0]) < 2 {
-			err = errors.New("parse web page error")
-			return
+		err = response.Re(`var url = '(.*)';`, &url)
+		if err != nil {
+			return exception.HTMLParseException(err)
 		}
 
-		downloadURL = matchResult[0][1]
-		downloadProtocol = "http"
+		format = "mp4"
+		protocol = "http"
 	} else if mark == "m3u8" {
-		downloadURL = newURL
-		downloadProtocol = "hls"
+		url = newUrl
+		format = "ts"
+		protocol = "hls"
 	} else {
-		err = errors.New("this tag is not supported: " + mark)
+		return exception.OtherException(errors.New("this tag is not supported " + mark))
 	}
 
-	body = append(body, Response{
+	cls.Response = append(cls.Response, &SpiderResponse{
 		ID:      1,
 		Title:   title,
 		Part:    part,
-		Format:  "mp4",
+		Format:  format,
 		Quality: "720P",
 		Links: []URLAttr{
 			{
-				URL: downloadURL,
+				URL: url,
 			},
 		},
-		DownloadProtocol: downloadProtocol,
-		DownloadHeaders:  map[string]string{"User-Agent": UserAgent, "Referer": newURL},
+		DownloadProtocol: protocol,
+		DownloadHeaders:  map[string]string{"User-Agent": UserAgent, "Referer": newUrl},
 	})
 
 	return

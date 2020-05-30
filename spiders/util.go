@@ -2,6 +2,7 @@ package spiders
 
 import (
 	"encoding/json"
+	"net/http"
 	"regexp"
 	"strings"
 )
@@ -45,7 +46,6 @@ func (s Sort) Swap(i, j int) {
 	s.v[i], s.v[j] = s.v[j], s.v[i]
 }
 
-
 type Parse struct {
 	Bytes  []byte
 	String string
@@ -70,5 +70,15 @@ func (p *Parse) Search(pattern string) (strings [][]string, err error) {
 	}
 
 	strings = regex.FindAllStringSubmatch(p.String, -1)
+	return
+}
+
+func cookieName(key string, cookieJar []*http.Cookie) (value string) {
+	for _, cookie := range cookieJar {
+		if cookie.Name == key {
+			value = cookie.Value
+			break
+		}
+	}
 	return
 }

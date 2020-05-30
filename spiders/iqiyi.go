@@ -5,163 +5,105 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/zhxingy/bogo/exception"
+	"github.com/zhxingy/bogo/selector"
 	"math/rand"
-	url2 "net/url"
-	"regexp"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
 )
 
-const (
-	iqiyiApi     = "https://cache.video.iqiyi.com/dash?"
-	iqiyiAuthApi = "http://111.59.199.42:9999/authKey"
-	iqiyiVfApi   = "http://111.59.199.42:9999/vf"
-	iqiyiF4vApi  = "http://111.59.199.42:9999/f4v"
-)
-
-var iqiyiQualitys = []int{100, 200, 300, 500, 600, 610}
-
-var iqiyiQuality = map[int]string{
-	100: "auto",
-	200: "270P",
-	300: "480P",
-	500: "720P",
-	600: "1080P",
-	610: "1080P50",
+type IQIYIRequest struct {
+	SpiderRequest
 }
 
-type iqiyiResponse struct {
-	Code string `json:"code"`
-	Msg  string `json:"msg"`
-	Data struct {
-		Aid  int    `json:"aid"`
-		Dd   string `json:"dd"`
-		Boss struct {
-			Data struct {
-				Pt string `json:"pt"`
-				T  string `json:"t"`
-				U  string `json:"u"`
-			} `json:"data"`
-		} `json:"boss"`
-		Program struct {
-			Video []struct {
-				Ff       string `json:"ff"`
-				Name     string `json:"name"`
-				Vsize    int    `json:"vsize"`
-				Duration int    `json:"duration"`
-				Bid      int    `json:"bid"`
-				M3u8     string `json:"m3u8"`
-				Scrsz    string `json:"scrsz"`
-				Fs       []struct {
-					L string `json:"l"`
-				} `json:"fs"`
-			} `json:"video"`
-		} `json:"program"`
-	} `json:"data"`
+func (cls *IQIYIRequest) Expression() string {
+	return `https?://(?:www\.)iqiyi\.com/v_(?P<id>[\da-z]+)`
 }
 
-type userID struct {
-	Uid int `json:"uid"`
+func (cls *IQIYIRequest) Args() *SpiderArgs {
+	return &SpiderArgs{
+		"iqiyi.com.com",
+		"爱奇艺",
+		Cookie{
+			"iqiyi",
+			true,
+			[]string{".iqiyi.com"}},
+	}
 }
 
-type us struct {
-	L string `json:"l"`
-}
-
-type IqiyiIE struct {
-	SpiderIE
-}
-
-func (tv *IqiyiIE) Parse(url string) (body []Response, err error) {
-	response, err := tv.DownloadWebPage(url, url2.Values{}, map[string]string{})
+func (cls *IQIYIRequest) Request()(err error) {
+	response, err := cls.request(cls.URL, nil)
 	if err != nil {
-		return
+		return exception.HTTPHtmlException(err)
 	}
 
-	matchResults, err := response.Search(`param\['tvid'\] = \"(?P<tvid>\d+)\";\s+param\['vid'\] = "(?P<vid>[a-zA-Z\d]+)"`)
+	var vid, tvid, title string
+	err = response.Re(`param\['tvid'\] = \"(?P<tvid>\d+)\";\s+param\['vid'\] = "(?P<vid>[a-zA-Z\d]+)"`, &tvid, &vid)
 	if err != nil {
-		return
+		return exception.HTMLParseException(err)
 	}
-
-	if len(matchResults) == 0 || len(matchResults[0]) < 3 {
-		err = errors.New("parse web page error")
-		return
-	}
-
-	tvid := matchResults[0][1]
-	vid := matchResults[0][2]
-
-	var title string
-	matchResults, _ = response.Search(`"tvName":"(?P<title>.*)","isfeizhengpian"`)
-	if len(matchResults) == 0 || len(matchResults[0]) < 2 {
-		title = vid
-	} else {
-		title = matchResults[0][1]
+	err = response.Re(`"tvName":"(?P<title>.*)","isfeizhengpian"`, &title)
+	if err != nil {
+		return exception.HTMLParseException(err)
 	}
 
 	tm := time.Now().Unix() * 1000
-	dfp := tv.Cookies["__dfp"]
-	if dfp != "" {
-		dfpSlice := strings.Split(dfp, "@")
-		if len(dfpSlice) > 0 {
-			dfp = dfpSlice[0]
-		}
-	}
-
-	p, err := url2.ParseQuery(tv.Cookies["P00002"])
-	if err != nil {
-		return
+	dfp := cls.CookieJar.Name("__dfp")
+	if dfp != "" && len(strings.Split(dfp, "@")) > 0 {
+		dfp = strings.Split(dfp, "@")[0]
 	}
 
 	var uid string
-	if len(p) != 0 {
-		for k, _ := range p {
-			var u userID
-			err = json.Unmarshal([]byte(k), &u)
-			if err != nil {
-				return
-			}
+	p2, _ := url.ParseQuery(cls.CookieJar.Name("P00002"))
+	if len(p2) > 0 {
+		type user struct {
+			Uid int `json:"uid"`
+		}
+		for key := range p2 {
+			var u user
+			_ = json.Unmarshal([]byte(key), &u)
 			if u.Uid != 0 {
 				uid = strconv.Itoa(u.Uid)
 				break
 			}
 
 		}
-
 	}
 
-	response, err = tv.DownloadWebPage(iqiyiAuthApi, url2.Values{"tvid": []string{tvid}, "tm": []string{strconv.Itoa(int(tm))}}, map[string]string{})
+	key, err := cls.authKey(tvid, strconv.Itoa(int(tm)))
 	if err != nil {
-		return
+		return exception.AuthKeyException(err)
 	}
 
-	for _, q := range iqiyiQualitys {
-		params := url2.Values{
+	cls.Header.Add("Referer", cls.URL)
+	for _, qualityID := range []int{100, 200, 300, 500, 600, 610} {
+		uri, err := cls.cmd5x("https://cache.video.iqiyi.com/dash?" + url.Values{
 			"tvid":          []string{tvid},
 			"vid":           []string{vid},
-			"bid":           []string{strconv.Itoa(q)},
+			"bid":           []string{strconv.Itoa(qualityID)},
 			"src":           []string{"01010031010000000000"},
 			"vt":            []string{"0"},
 			"rs":            []string{"1"},
 			"uid":           []string{uid},
 			"ori":           []string{"pcw"},
 			"ps":            []string{"0"},
-			"k_uid":         []string{tv.Cookies["QC005"]},
+			"k_uid":         []string{cls.CookieJar.Name("QC005")},
 			"pt":            []string{"0"},
 			"d":             []string{"0"},
 			"s":             []string{""},
 			"lid":           []string{""},
 			"cf":            []string{""},
 			"ct":            []string{""},
-			"authKey":       []string{response.String},
+			"authKey":       []string{key},
 			"k_tag":         []string{"1"},
 			"ost":           []string{"0"},
 			"ppt":           []string{"0"},
 			"dfp":           []string{dfp},
 			"locale":        []string{"zh_cn"},
 			"prio":          []string{`{"ff":"f4v","code":2}`},
-			"pck":           []string{tv.Cookies["P00001"]},
+			"pck":           []string{cls.CookieJar.Name("P00001")},
 			"k_err_retries": []string{"0"},
 			"up":            []string{""},
 			"qd_v":          []string{"2"},
@@ -172,143 +114,192 @@ func (tv *IqiyiIE) Parse(url string) (body []Response, err error) {
 			"k_ft4":         []string{"1581060"},
 			"k_ft5":         []string{"1"},
 			"bop":           []string{fmt.Sprintf(`{"version":"10.0","dfp":"{%s}"}`, dfp)},
-		}
-
-		req, err := tv.DownloadWebPage(iqiyiVfApi,
-			url2.Values{
-				"url": []string{base64.StdEncoding.EncodeToString([]byte(iqiyiApi + params.Encode() + "&ut=1"))},
-			}, map[string]string{})
-
+		}.Encode() + "&ut=1")
 		if err != nil {
-			return nil, err
+			return exception.AuthKeyException(err)
 		}
 
-		var data iqiyiResponse
-		req, err = tv.DownloadWebPage(req.String, url2.Values{}, map[string]string{"Referer": url})
+		response, err = cls.request(uri, nil)
 		if err != nil {
-			return nil, err
+			return exception.HTTPJsonException(err)
 		}
 
-		err = req.Json(&data)
-
-		if data.Code != "A00000" {
-			err = errors.New(data.Msg)
-			return nil, err
+		var vjson struct {
+			Code string `json:"code"`
+			Msg  string `json:"msg"`
+			Data struct {
+				Aid  int    `json:"aid"`
+				Dd   string `json:"dd"`
+				Boss struct {
+					Data struct {
+						Pt string `json:"pt"`
+						T  string `json:"t"`
+						U  string `json:"u"`
+					} `json:"data"`
+				} `json:"boss"`
+				Program struct {
+					Video []struct {
+						Ff       string `json:"ff"`
+						Name     string `json:"name"`
+						Vsize    int    `json:"vsize"`
+						Duration int    `json:"duration"`
+						Bid      int    `json:"bid"`
+						M3u8     string `json:"m3u8"`
+						Scrsz    string `json:"scrsz"`
+						Fs       []struct {
+							L string `json:"l"`
+						} `json:"fs"`
+					} `json:"video"`
+				} `json:"program"`
+			} `json:"data"`
+		}
+		err = response.Json(&vjson)
+		if err != nil {
+			return exception.JSONParseException(err)
+		}
+		if vjson.Code != "A00000" {
+			return exception.ServerAuthException(errors.New(vjson.Msg))
 		}
 
-		var repeated bool
-		for _, v := range data.Data.Program.Video {
-			for _, b := range body {
-				if b.ID == v.Bid && (v.M3u8 != "" || len(v.Fs) > 0) {
-					repeated = true
-					break
+		for index, video := range vjson.Data.Program.Video {
+			if video.M3u8 != "" || len(video.Fs) > 0 {
+				var width, height int
+				var w, h string
+				if video.Scrsz != "" {
+					var x selector.Selector
+					x = []byte(video.Scrsz)
+					_ = x.Re(`(\d+)x(\d+)`, &w, &h)
 				}
-			}
-
-			if repeated {
-				break
-			}
-
-			if v.M3u8 != "" || len(v.Fs) > 0 {
-				width := "0"
-				height := "0"
-				if v.Scrsz != "" {
-					re := regexp.MustCompile(`(\d+)x(\d+)`)
-					match := re.FindAllStringSubmatch(v.Scrsz, -1)
-					if len(match) > 0 && len(match[0]) == 3 {
-						width = match[0][1]
-						height = match[0][2]
-					}
+				if w != "" && h != "" {
+					width, _ = strconv.Atoi(w)
+					height, _ = strconv.Atoi(h)
 				}
-				w, _ := strconv.Atoi(width)
-				h, _ := strconv.Atoi(height)
 
-				var format string
-				var urlAttr []URLAttr
-				var downloadProtocol string
-				if v.M3u8 != "" {
-					format = "mp4"
-					downloadProtocol = "hlsText"
-					urlAttr = []URLAttr{
+				var format, protocol string
+				var urlAttrs []URLAttr
+				if video.M3u8 != "" {
+					format = "ts"
+					protocol = "hlsNative"
+					urlAttrs = []URLAttr{
 						{
-							URL:   v.M3u8,
+							URL:   video.M3u8,
 							Order: 0,
-							Size:  v.Vsize,
+							Size:  video.Vsize,
 						},
 					}
-				} else {
+				}else{
 					format = "f4v"
-					if len(v.Fs) > 1 {
-						downloadProtocol = "httpSegF4v"
+					if len(video.Fs) > 1 {
+						protocol = "httpSegF4v"
 					} else {
-						downloadProtocol = "http"
+						protocol = "http"
 					}
 
-					for _, u := range v.Fs {
-						l := data.Data.Dd + u.L
-						l += fmt.Sprintf("&cross-domain=1&qyid=%s&qypid=%s&t=%s&cid=afbe8fd3d73448c9&vid=%s&QY00001=%s&su=%s&client=&z=&mi=%s&bt=&ct=5&e=&ib=4&ptime=0&pv=0.1&tn=%v",
-							data.Data.Boss.Data.Pt, tvid+"_02020031010000000000", data.Data.Boss.Data.T, vid, data.Data.Boss.Data.U, data.Data.Boss.Data.Pt,
-							fmt.Sprintf("tv_%d_%s_%s", data.Data.Aid, tvid, vid), rand.Float32())
-
-						x := strings.Split(u.L, "?")[0]
-						z := strings.Split(x, "/")
-						r, err := tv.DownloadWebPage(iqiyiF4vApi, url2.Values{"sign": []string{data.Data.Boss.Data.T + strings.Split(z[len(z)-1], ".")[0]}}, map[string]string{})
-						if err != nil {
-							return nil, err
+					for _, v := range video.Fs{
+						uri = vjson.Data.Dd + v.L + fmt.Sprintf("&cross-domain=1&qyid=%s&qypid=%s&t=%s&cid=afbe8fd3d73448c9&vid=%s&QY00001=%s&su=%s&client=&z=&mi=%s&bt=&ct=5&e=&ib=4&ptime=0&pv=0.1&tn=%v", vjson.Data.Boss.Data.Pt, tvid+"_02020031010000000000", vjson.Data.Boss.Data.T, vid, vjson.Data.Boss.Data.U, vjson.Data.Boss.Data.Pt, fmt.Sprintf("tv_%d_%s_%s", vjson.Data.Aid, tvid, vid), rand.Float32())
+						z := strings.Split(strings.Split(v.L, "?")[0], "/")
+						sign, err := cls.f4v(vjson.Data.Boss.Data.T +  strings.Split(z[len(z)-1], ".")[0])
+						if err != nil && index > 4{
+							return exception.AuthKeyException(err)
+						}else if err != nil{
+							break
 						}
 
-						p, err := tv.DownloadWebPage(l+"&ibt="+r.String, url2.Values{}, map[string]string{})
-						if err != nil {
-							return nil, err
+						response, err := cls.request(uri + "&ibt=" + sign, nil)
+						if err != nil  && index > 4{
+							return exception.HTTPJsonException(err)
+						}else if err != nil{
+							break
 						}
 
-						var d us
-						err = p.Json(&d)
-						if err != nil {
-							return nil, err
+						var us struct {
+							L string `json:"l"`
+						}
+						err = response.Json(&us)
+						if err != nil && index > 4{
+							return exception.JSONParseException(err)
+						}else if err != nil{
+							break
 						}
 
-						urlAttr = append(urlAttr, URLAttr{
-							URL: d.L,
+						urlAttrs = append(urlAttrs, URLAttr{
+							URL: us.L,
 						})
 					}
-
 				}
 
-				body = append(body, Response{
-					ID:               v.Bid,
+				cls.Response = append(cls.Response, &SpiderResponse{
+					ID:               video.Bid,
 					Title:            title,
-					Part:             v.Name,
+					Part:             video.Name,
 					Format:           format,
-					Size:             v.Vsize,
-					Duration:         v.Duration,
-					Width:            w,
-					Height:           h,
-					Quality:          iqiyiQuality[v.Bid],
-					Links:            urlAttr,
-					DownloadProtocol: downloadProtocol,
+					Size:             video.Vsize,
+					Duration:         video.Duration,
+					Width:            width,
+					Height:           height,
+					Quality:          map[int]string{
+						100: "auto",
+						200: "270P",
+						300: "480P",
+						500: "720P",
+						600: "1080P",
+						610: "1080P50",
+					}[video.Bid],
+					Links:            urlAttrs,
+					DownloadProtocol: protocol,
 				})
-				break
 			}
 		}
 	}
 
+	if len(cls.Response) < 1{
+		return exception.OtherException(errors.New(""))
+	}
+
+	x := make(map[int]*SpiderResponse)
+	for _, response := range cls.Response {
+		x[response.ID] = response
+	}
+
+	var Response []*SpiderResponse
+	for _, response := range x {
+		Response = append(Response, response)
+	}
+
+	cls.Response = Response
 	return
 
 }
 
-func (tv *IqiyiIE) CookieName() string {
-	return "iqiyi"
+func (cls *IQIYIRequest)authKey(id, tm string)(key string, err error){
+	response, err := cls.request("http://111.59.199.42:9999/authKey?", url.Values{
+		"tvid": []string{id},
+		"tm": []string{tm},
+	})
+	if err != nil{
+		return
+	}
+
+	key = response.String()
+	return
 }
 
-func (tv *IqiyiIE) Name() string {
-	return "爱奇艺"
+func (cls *IQIYIRequest)cmd5x(oldUrl string)(newUrl string, err error){
+	response, err := cls.request("http://111.59.199.42:9999/vf?", url.Values{"url": []string{base64.StdEncoding.EncodeToString([]byte(oldUrl))}})
+	if err != nil{
+		return
+	}
+
+	newUrl = response.String()
+	return
 }
 
-func (tv *IqiyiIE) Domain() *Cookie {
-	return &Cookie{"iqiyi",true, []string{".iqiyi.com"}}
-}
+func (cls *IQIYIRequest)f4v(key string)(sign string, err error){
+	response, err := cls.request("http://111.59.199.42:9999/f4v", url.Values{"sign": []string{key}})
+	if err != nil{
+		return
+	}
 
-func (tv *IqiyiIE) Pattern() string {
-	return `https?://(?:www\.)iqiyi\.com/v_(?P<id>[\da-z]+)`
+	sign = response.String()
+	return
 }

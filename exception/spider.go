@@ -12,6 +12,8 @@ const  (
 	XMLParseExceptionCode = 202
 	TextParseExceptionCode = 203
 	ServerAuthExceptionCode = 300
+	AuthKeyExceptionCode = 301
+	OtherExceptionCode = 500
 )
 
 func HTTPHtmlException(err error) error  {
@@ -50,3 +52,10 @@ func ServerAuthException(err error) error  {
 	return fmt.Errorf("server auth error. errcode=%d, errmsg=%s", ServerAuthExceptionCode, err)
 }
 
+func AuthKeyException(err error) error  {
+	return fmt.Errorf("get auth key error. errcode=%d, errmsg=%s", AuthKeyExceptionCode, err)
+}
+
+func OtherException(err error) error  {
+	return fmt.Errorf("other error. errcode=%d, errmsg=%s", OtherExceptionCode, err)
+}

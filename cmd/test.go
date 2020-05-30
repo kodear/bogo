@@ -1,8 +1,9 @@
-package main
+package cmd
+
 
 import (
-	"errors"
-	"github.com/zhxingy/bogo/exception"
+	"fmt"
+	"github.com/zhxingy/bogo/selector"
 )
 
 func main()  {
@@ -18,5 +19,16 @@ func main()  {
 	//cfg.Write()
 	//cfg.Close()
 
-	panic(exception.HTTPHtmlException(errors.New("test error")))
+	//panic(exception.HTTPHtmlException(errors.New("test error")))
+	//s := selector.Create([]byte("abcdefg"))
+	var s selector.Selector
+	s = []byte("abcdefg")
+
+	fmt.Println(s.String())
+	var x, y, z string
+	err := s.Re(`(a).*(e).*(g)`, &x, &y, &z)
+	if err != nil{
+		fmt.Println(err)
+	}
+	fmt.Println(x, y, z)
 }

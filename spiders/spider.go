@@ -15,16 +15,14 @@ import (
 const UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"
 
 var Spiders = []Spider{
-	&AcfunIE{},
-	&AcfunBangumiIE{},
-	&BiliBiliIE{},
-	&BiliBiliBangumiIE{},
-	&IqiyiIE{},
-	&TencentIE{},
-	&MgtvIE{},
-	&YouKuIE{},
-	&RiJuTvIE{},
-	&YuespIE{},
+	//&BiliBiliIE{},
+	//&BiliBiliBangumiIE{},
+	//&IqiyiIE{},
+	//&TencentIE{},
+	//&MgtvIE{},
+	//&YouKuIE{},
+	//&RiJuTvIE{},
+	//&YuespIE{},
 }
 
 type Spider interface {
@@ -59,7 +57,7 @@ type URLAttr struct {
 }
 
 type Cookie struct {
-	Name string
+	Name   string
 	Enable bool
 	Domain []string
 }
@@ -164,18 +162,6 @@ func do(r string, cookies map[string]string) (body []Response, err error) {
 	return
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
 func ShowVideo(r string, cookies map[string]string) {
 	body, err := do(r, cookies)
 	if err != nil {
@@ -279,4 +265,3 @@ func Do(r, q string, id int, cookies map[string]string) (v Response, err error) 
 	// 如果默认值也取不到, 则取最大码率数据
 	return body[0], nil
 }
-

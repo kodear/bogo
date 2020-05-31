@@ -1,7 +1,7 @@
 package spider
 
 import (
-	"github.com/pkg/errors"
+	"errors"
 	"net/http"
 )
 

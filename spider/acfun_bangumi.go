@@ -12,10 +12,10 @@ type ACFUNBangUmiClient struct {
 
 func (cls *ACFUNBangUmiClient) Meta() *Meta {
 	return &Meta{
-		"www.acfun.com",
-		"acfun番剧",
-		`https?://(?:www\.)?acfun\.cn/bangumi/`,
-		Cookie{},
+		Domain:     "https://www.acfun.cn/",
+		Name:       "acfun",
+		Expression: `https?://(?:www\.)?acfun\.cn/bangumi/`,
+		Cookie:     Cookie{},
 	}
 }
 

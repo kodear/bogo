@@ -13,13 +13,13 @@ type BILIBILIBangUmiClient struct {
 
 func (cls *BILIBILIBangUmiClient) Meta() *Meta {
 	return &Meta{
-		"www.bilibili.com",
-		"哔哩哔哩番剧",
-		`https?://(?:www\.)?bilibili\.com/bangumi/play/(?:ss|ep)\d+`,
-		Cookie{
-			"bilibili",
-			true,
-			[]string{".bilibili.com"},
+		Domain:     "https://www.bilibili.com/",
+		Name:       "哔哩哔哩番剧",
+		Expression: `https?://(?:www\.)?bilibili\.com/bangumi/play/(?:ss|ep)\d+`,
+		Cookie: Cookie{
+			Name:   "bilibili",
+			Enable: true,
+			Domain: []string{".bilibili.com"},
 		},
 	}
 }

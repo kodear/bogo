@@ -14,13 +14,13 @@ type YOUKUClient struct {
 
 func (cls *YOUKUClient) Meta() *Meta {
 	return &Meta{
-		"www.youku.com",
-		"优酷视频",
-		`https?://(?:v\.|player\.|video\.)?(?:youku|tudou)\.com/(?:v_show|v_nextstage|embed|v)/(?:id_)?(?P<vid>[a-zA-Z\d]+={0,2})`,
-		Cookie{
-			"youku",
-			true,
-			[]string{".youku.com", "user.youku.com"},
+		Domain:     "https://www.youku.com/",
+		Name:       "优酷视频",
+		Expression: `https?://(?:v\.|player\.|video\.)?(?:youku|tudou)\.com/(?:v_show|v_nextstage|embed|v)/(?:id_)?(?P<vid>[a-zA-Z\d]+={0,2})`,
+		Cookie: Cookie{
+			Name:   "youku",
+			Enable: true,
+			Domain: []string{".youku.com", "user.youku.com"},
 		},
 	}
 }

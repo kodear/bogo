@@ -20,13 +20,14 @@ type IQIYIClient struct {
 
 func (cls *IQIYIClient) Meta() *Meta {
 	return &Meta{
-		"iqiyi.com.com",
-		"爱奇艺",
-		`https?://(?:www\.)iqiyi\.com/v_(?P<id>[\da-z]+)`,
-		Cookie{
-			"iqiyi",
-			true,
-			[]string{".iqiyi.com"}},
+		Domain:     "https://www.iqiyi.com/",
+		Name:       "爱奇艺",
+		Expression: `https?://(?:www\.)iqiyi\.com/v_(?P<id>[\da-z]+)`,
+		Cookie: Cookie{
+			Name:   "iqiyi",
+			Enable: true,
+			Domain: []string{".iqiyi.com"},
+		},
 	}
 }
 

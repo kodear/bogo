@@ -22,7 +22,7 @@ func TestQQClient_Request(t *testing.T) {
 		Client{
 			CookieJar: cookieJar,
 			Header:    http.Header{},
-			URL:       "https://v.qq.com/x/cover/mzc00200uig074r/u0034ilke49.html",
+			URL:       "https://v.qq.com/x/cover/mzc00200uig074r/o00348wcv07.html",
 		},
 	}
 	err := test.Request()

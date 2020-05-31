@@ -18,13 +18,13 @@ type MGTVClient struct {
 
 func (cls *MGTVClient) Meta() *Meta {
 	return &Meta{
-		"www.mgtv.com",
-		"芒果TV",
-		`https?://(?:www\.)?mgtv\.com/(?:b|l)/\d+/(?P<id>\d+)`,
-		Cookie{
-			"mgtv",
-			true,
-			[]string{".mgtv.com"},
+		Domain:     "https://www.mgtv.com//",
+		Name:       "芒果TV",
+		Expression: `https?://(?:www\.)?mgtv\.com/(?:b|l)/\d+/(?P<id>\d+)`,
+		Cookie: Cookie{
+			Name:   "mgtv",
+			Enable: true,
+			Domain: []string{".mgtv.com"},
 		},
 	}
 }

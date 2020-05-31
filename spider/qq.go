@@ -2,8 +2,8 @@ package spider
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/zhxingy/bogo/exception"
 	"math"
 	"math/rand"
@@ -19,13 +19,14 @@ type QQClient struct {
 
 func (cls *QQClient) Meta() *Meta {
 	return &Meta{
-		"v.qq.com.com",
-		"腾讯视频",
-		`https?://(?:v\.|www\.)?qq\.(com|cn)/x/(?:cover|page)/(?:[a-z\d]+/)?(?P<id>[a-z\d]+)`,
-		Cookie{
-			"qq",
-			true,
-			[]string{".qq.com", ".video.qq.com"}},
+		Domain:     "https://v.qq.com/",
+		Name:       "腾讯视频",
+		Expression: `https?://(?:v\.|www\.)?qq\.(com|cn)/x/(?:cover|page)/(?:[a-z\d]+/)?(?P<id>[a-z\d]+)`,
+		Cookie: Cookie{
+			Name:   "qq",
+			Enable: true,
+			Domain: []string{".qq.com", ".video.qq.com"},
+		},
 	}
 }
 

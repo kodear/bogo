@@ -12,10 +12,10 @@ type XIGUAClient struct {
 
 func (cls *XIGUAClient) Meta() *Meta {
 	return &Meta{
-		"www.ixigua.com",
-		"西瓜视频",
-		`https://www.ixigua.com/cinema/album/([A-Za-z\d]+)`,
-		Cookie{},
+		Domain:     "https://www.ixigua.com/",
+		Name:       "西瓜视频",
+		Expression: `https://www.ixigua.com/cinema/album/([A-Za-z\d]+)`,
+		Cookie:     Cookie{},
 	}
 }
 

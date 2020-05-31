@@ -11,10 +11,10 @@ type YUESPClient struct {
 
 func (cls *YUESPClient) Meta() *Meta {
 	return &Meta{
-		"www.yuesp.com",
-		"粤视频",
-		`https?://(?:www\.)?yuesp\.com/play/index(\d+)`,
-		Cookie{},
+		Domain:     "http://www.yuesp.com/",
+		Name:       "粤视频",
+		Expression: `https?://(?:www\.)?yuesp\.com/play/index(\d+)`,
+		Cookie:     Cookie{},
 	}
 }
 

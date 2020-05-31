@@ -13,10 +13,10 @@ type ACFUNClient struct {
 
 func (cls *ACFUNClient) Meta() *Meta {
 	return &Meta{
-		"www.acfun.com",
-		"acfun",
-		`https?://(?:www\.)?acfun\.cn/v/ac\d+`,
-		Cookie{},
+		Domain:     "https://www.acfun.cn/",
+		Name:       "acfun",
+		Expression: `https?://(?:www\.)?acfun\.cn/v/ac\d+`,
+		Cookie:     Cookie{},
 	}
 }
 

@@ -11,10 +11,10 @@ type RIJUTVClient struct {
 
 func (cls *RIJUTVClient) Meta() *Meta {
 	return &Meta{
-		"www.rijutv.com",
-		"日剧TV",
-		`https://www\.rijutv\.com/player/(?P<id>\d+)\.html`,
-		Cookie{},
+		Domain:     "https://www.rijutv.com/",
+		Name:       "日剧TV",
+		Expression: `https://www\.rijutv\.com/player/(?P<id>\d+)\.html`,
+		Cookie:     Cookie{},
 	}
 }
 

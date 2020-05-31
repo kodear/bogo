@@ -1,4 +1,4 @@
-package spiders
+package spider
 
 import (
 	"fmt"
@@ -9,17 +9,11 @@ type RIJUTVClient struct {
 	Client
 }
 
-func (cls *RIJUTVClient) Expression() string {
-	// https://www.rijutv.com/player/90485.html
-	// https://www.rijutv.com/player/77181.html
-	// https://www.rijutv.com/player/90494.html
-	return `https://www\.rijutv\.com/player/(?P<id>\d+)\.html`
-}
-
-func (cls *RIJUTVClient) Args() *Args {
-	return &Args{
+func (cls *RIJUTVClient) Meta() *Meta {
+	return &Meta{
 		"www.rijutv.com",
 		"日剧TV",
+		`https://www\.rijutv\.com/player/(?P<id>\d+)\.html`,
 		Cookie{},
 	}
 }

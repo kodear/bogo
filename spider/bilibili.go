@@ -1,24 +1,22 @@
-package spiders
+package spider
 
 import (
 	"errors"
 	"github.com/zhxingy/bogo/exception"
+	"github.com/zhxingy/bogo/selector"
 	"net/url"
 	"strconv"
 )
 
-type BILIBILIBangUmiClient struct {
+type BILIBILIClient struct {
 	Client
 }
 
-func (cls *BILIBILIBangUmiClient) Expression() string {
-	return `https?://(?:www\.)?bilibili\.com/bangumi/play/(?:ss|ep)\d+`
-}
-
-func (cls *BILIBILIBangUmiClient) Args() *Args {
-	return &Args{
+func (cls *BILIBILIClient) Meta() *Meta {
+	return &Meta{
 		"www.bilibili.com",
-		"哔哩哔哩番剧",
+		"哔哩哔哩",
+		`https?://(?:www\.)?bilibili\.com/video/[A-Za-z\d]+`,
 		Cookie{
 			"bilibili",
 			true,
@@ -27,27 +25,27 @@ func (cls *BILIBILIBangUmiClient) Args() *Args {
 	}
 }
 
-func (cls *BILIBILIBangUmiClient) Request() (err error) {
+func (cls *BILIBILIClient) Request() (err error) {
 	response, err := cls.request(cls.URL, nil)
 	if err != nil {
 		return exception.HTTPHtmlException(err)
 	}
 
 	var data struct {
-		Loaded    bool `json:"loaded"`
-		MediaInfo struct {
+		Aid       int `json:"aid"`
+		VideoData struct {
 			Title string `json:"title"`
-		} `json:"mediaInfo"`
-		EPInfo struct {
-			Aid   int    `json:"aid"`
-			Cid   int    `json:"cid"`
-			Title string `json:"title"`
-		} `json:"EpInfo"`
-		EPList []struct {
-			Aid   int    `json:"aid"`
-			Cid   int    `json:"cid"`
-			Title string `json:"title"`
-		} `json:"EpList"`
+			Pages []struct {
+				Cid       int    `json:"cid"`
+				Page      int    `json:"page"`
+				Part      string `json:"part"`
+				Duration  int    `json:"duration"`
+				Dimension struct {
+					Width  int `json:"width"`
+					Height int `json:"height"`
+				} `json:"dimension"`
+			} `json:"pages"`
+		} `json:"videoData"`
 	}
 
 	err = response.ReByJson(`__INITIAL_STATE__=(.*);\(function\(\)`, &data)
@@ -55,17 +53,27 @@ func (cls *BILIBILIBangUmiClient) Request() (err error) {
 		return
 	}
 
-	var aid, cid int
-	var part string
-	if data.EPInfo.Aid == -1 || data.EPInfo.Cid == -1 {
-		aid = data.EPList[0].Aid
-		cid = data.EPList[0].Cid
-		part = data.EPList[0].Title
-	} else {
-		aid = data.EPInfo.Aid
-		cid = data.EPInfo.Cid
-		part = data.EPInfo.Title
+	var x selector.Selector
+	var page, part string
+	var cid, duration, width, height int
+	x = []byte(cls.URL)
+	err = x.Re(cls.Meta().Expression+`.*\?p=(?P<page>\d+)`, &page)
+	if err != nil {
+		page = "1"
 	}
+	pageInt, _ := strconv.Atoi(page)
+
+	for _, pageInfo := range data.VideoData.Pages {
+		if pageInfo.Page == pageInt {
+			part = pageInfo.Part
+			duration = pageInfo.Duration
+			width = pageInfo.Dimension.Width
+			height = pageInfo.Dimension.Height
+			cid = pageInfo.Cid
+			break
+		}
+	}
+
 	qualityIDByString := map[int]string{
 		15:  "360P",
 		16:  "360P",
@@ -84,10 +92,9 @@ func (cls *BILIBILIBangUmiClient) Request() (err error) {
 	}
 
 	for _, qualityID := range qualityIds {
-		cls.Header.Add("Referer", cls.URL)
-		response, err = cls.request("https://api.bilibili.com/pgc/player/web/playurl?", url.Values{
+		response, err = cls.request("https://api.bilibili.com/x/player/playurl?", url.Values{
 			"qn":   []string{strconv.Itoa(qualityID)},
-			"avid": []string{strconv.Itoa(aid)},
+			"avid": []string{strconv.Itoa(data.Aid)},
 			"cid":  []string{strconv.Itoa(cid)},
 		})
 		if err != nil {
@@ -110,12 +117,13 @@ func (cls *BILIBILIBangUmiClient) Request() (err error) {
 					Length int    `json:"length"`
 					Size   int    `json:"size"`
 				} `json:"durl"`
-			} `json:"result"`
+			} `json:"data"`
 		}
 		err = response.Json(&json)
 		if err != nil {
 			return exception.JSONParseException(err)
 		}
+
 		if json.Code != 0 {
 			return exception.ServerAuthException(errors.New(json.Message))
 		}
@@ -149,11 +157,13 @@ func (cls *BILIBILIBangUmiClient) Request() (err error) {
 
 		cls.response = append(cls.response, &Response{
 			ID:               json.Data.Quality,
-			Title:            data.MediaInfo.Title,
+			Title:            data.VideoData.Title,
 			Part:             part,
 			Format:           format,
 			Size:             size,
-			Duration:         json.Data.Timelength / 1000,
+			Duration:         duration,
+			Width:            width,
+			Height:           height,
 			StreamType:       json.Data.Format,
 			Quality:          qualityIDByString[json.Data.Quality],
 			Links:            links,
@@ -174,4 +184,5 @@ func (cls *BILIBILIBangUmiClient) Request() (err error) {
 
 	cls.response = Response
 	return
+
 }

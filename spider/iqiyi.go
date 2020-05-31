@@ -1,4 +1,4 @@
-package spiders
+package spider
 
 import (
 	"encoding/base64"
@@ -18,14 +18,11 @@ type IQIYIClient struct {
 	Client
 }
 
-func (cls *IQIYIClient) Expression() string {
-	return `https?://(?:www\.)iqiyi\.com/v_(?P<id>[\da-z]+)`
-}
-
-func (cls *IQIYIClient) Args() *Args {
-	return &Args{
+func (cls *IQIYIClient) Meta() *Meta {
+	return &Meta{
 		"iqiyi.com.com",
 		"爱奇艺",
+		`https?://(?:www\.)iqiyi\.com/v_(?P<id>[\da-z]+)`,
 		Cookie{
 			"iqiyi",
 			true,
@@ -33,7 +30,7 @@ func (cls *IQIYIClient) Args() *Args {
 	}
 }
 
-func (cls *IQIYIClient) Request()(err error) {
+func (cls *IQIYIClient) Request() (err error) {
 	response, err := cls.request(cls.URL, nil)
 	if err != nil {
 		return exception.HTTPHtmlException(err)
@@ -78,7 +75,7 @@ func (cls *IQIYIClient) Request()(err error) {
 	}
 
 	cls.Header.Add("Referer", cls.URL)
-	for _, qualityID := range []int{100, 200, 300, 500, 600, 610} {
+	for index, qualityID := range []int{100, 200, 300, 500, 600, 610} {
 		uri, err := cls.cmd5x("https://cache.video.iqiyi.com/dash?" + url.Values{
 			"tvid":          []string{tvid},
 			"vid":           []string{vid},
@@ -121,7 +118,13 @@ func (cls *IQIYIClient) Request()(err error) {
 
 		response, err = cls.request(uri, nil)
 		if err != nil {
-			return exception.HTTPJsonException(err)
+			if index == 5 && len(cls.response) == 0 {
+				return exception.HTTPJsonException(err)
+			} else if len(cls.response) > 0 {
+				return nil
+			} else {
+				continue
+			}
 		}
 
 		var vjson struct {
@@ -155,13 +158,25 @@ func (cls *IQIYIClient) Request()(err error) {
 		}
 		err = response.Json(&vjson)
 		if err != nil {
-			return exception.JSONParseException(err)
+			if index == 5 && len(cls.response) == 0 {
+				return exception.JSONParseException(err)
+			} else if len(cls.response) > 0 {
+				return nil
+			} else {
+				continue
+			}
 		}
 		if vjson.Code != "A00000" {
-			return exception.ServerAuthException(errors.New(vjson.Msg))
+			if index == 5 && len(cls.response) == 0 {
+				return exception.ServerAuthException(err)
+			} else if len(cls.response) > 0 {
+				return nil
+			} else {
+				continue
+			}
 		}
 
-		for index, video := range vjson.Data.Program.Video {
+		for _, video := range vjson.Data.Program.Video {
 			if video.M3u8 != "" || len(video.Fs) > 0 {
 				var width, height int
 				var w, h string
@@ -187,7 +202,7 @@ func (cls *IQIYIClient) Request()(err error) {
 							Size:  video.Vsize,
 						},
 					}
-				}else{
+				} else {
 					format = "f4v"
 					if len(video.Fs) > 1 {
 						protocol = "f4v"
@@ -195,31 +210,37 @@ func (cls *IQIYIClient) Request()(err error) {
 						protocol = "http"
 					}
 
-					for _, v := range video.Fs{
+					for _, v := range video.Fs {
 						uri = vjson.Data.Dd + v.L + fmt.Sprintf("&cross-domain=1&qyid=%s&qypid=%s&t=%s&cid=afbe8fd3d73448c9&vid=%s&QY00001=%s&su=%s&client=&z=&mi=%s&bt=&ct=5&e=&ib=4&ptime=0&pv=0.1&tn=%v", vjson.Data.Boss.Data.Pt, tvid+"_02020031010000000000", vjson.Data.Boss.Data.T, vid, vjson.Data.Boss.Data.U, vjson.Data.Boss.Data.Pt, fmt.Sprintf("tv_%d_%s_%s", vjson.Data.Aid, tvid, vid), rand.Float32())
 						z := strings.Split(strings.Split(v.L, "?")[0], "/")
-						sign, err := cls.f4v(vjson.Data.Boss.Data.T +  strings.Split(z[len(z)-1], ".")[0])
-						if err != nil && index > 4{
+						sign, err := cls.f4v(vjson.Data.Boss.Data.T + strings.Split(z[len(z)-1], ".")[0])
+						if err != nil {
 							return exception.AuthKeyException(err)
-						}else if err != nil{
-							break
 						}
 
-						response, err := cls.request(uri + "&ibt=" + sign, nil)
-						if err != nil  && index > 4{
-							return exception.HTTPJsonException(err)
-						}else if err != nil{
-							break
+						response, err := cls.request(uri+"&ibt="+sign, nil)
+						if err != nil {
+							if index == 5 && len(cls.response) == 0 {
+								return exception.HTTPJsonException(err)
+							} else if len(cls.response) > 0 {
+								return nil
+							} else {
+								goto End
+							}
 						}
 
 						var us struct {
 							L string `json:"l"`
 						}
 						err = response.Json(&us)
-						if err != nil && index > 4{
-							return exception.JSONParseException(err)
-						}else if err != nil{
-							break
+						if err != nil {
+							if index == 5 && len(cls.response) == 0 {
+								return exception.JSONParseException(err)
+							} else if len(cls.response) > 0 {
+								return nil
+							} else {
+								goto End
+							}
 						}
 
 						urlAttrs = append(urlAttrs, URLAttr{
@@ -229,15 +250,15 @@ func (cls *IQIYIClient) Request()(err error) {
 				}
 
 				cls.response = append(cls.response, &Response{
-					ID:               video.Bid,
-					Title:            title,
-					Part:             video.Name,
-					Format:           format,
-					Size:             video.Vsize,
-					Duration:         video.Duration,
-					Width:            width,
-					Height:           height,
-					Quality:          map[int]string{
+					ID:       video.Bid,
+					Title:    title,
+					Part:     video.Name,
+					Format:   format,
+					Size:     video.Vsize,
+					Duration: video.Duration,
+					Width:    width,
+					Height:   height,
+					Quality: map[int]string{
 						100: "auto",
 						200: "270P",
 						300: "480P",
@@ -248,11 +269,15 @@ func (cls *IQIYIClient) Request()(err error) {
 					Links:            urlAttrs,
 					DownloadProtocol: protocol,
 				})
+
+				break
 			}
 		}
+	End:
+		continue
 	}
 
-	if len(cls.response) < 1{
+	if len(cls.response) < 1 {
 		return exception.OtherException(errors.New(""))
 	}
 
@@ -271,12 +296,12 @@ func (cls *IQIYIClient) Request()(err error) {
 
 }
 
-func (cls *IQIYIClient)authKey(id, tm string)(key string, err error){
+func (cls *IQIYIClient) authKey(id, tm string) (key string, err error) {
 	response, err := cls.request("http://111.59.199.42:9999/authKey?", url.Values{
 		"tvid": []string{id},
-		"tm": []string{tm},
+		"tm":   []string{tm},
 	})
-	if err != nil{
+	if err != nil {
 		return
 	}
 
@@ -284,9 +309,9 @@ func (cls *IQIYIClient)authKey(id, tm string)(key string, err error){
 	return
 }
 
-func (cls *IQIYIClient)cmd5x(oldUrl string)(newUrl string, err error){
+func (cls *IQIYIClient) cmd5x(oldUrl string) (newUrl string, err error) {
 	response, err := cls.request("http://111.59.199.42:9999/vf?", url.Values{"url": []string{base64.StdEncoding.EncodeToString([]byte(oldUrl))}})
-	if err != nil{
+	if err != nil {
 		return
 	}
 
@@ -294,9 +319,9 @@ func (cls *IQIYIClient)cmd5x(oldUrl string)(newUrl string, err error){
 	return
 }
 
-func (cls *IQIYIClient)f4v(key string)(sign string, err error){
+func (cls *IQIYIClient) f4v(key string) (sign string, err error) {
 	response, err := cls.request("http://111.59.199.42:9999/f4v", url.Values{"sign": []string{key}})
-	if err != nil{
+	if err != nil {
 		return
 	}
 

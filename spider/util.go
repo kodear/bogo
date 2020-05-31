@@ -1,4 +1,4 @@
-package spiders
+package spider
 
 import "regexp"
 
@@ -10,5 +10,3 @@ func match(uri, expression string) bool {
 		return ok
 	}
 }
-
-

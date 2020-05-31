@@ -1,4 +1,4 @@
-package spiders
+package spider
 
 import (
 	"encoding/json"
@@ -11,14 +11,11 @@ type ACFUNClient struct {
 	Client
 }
 
-func (cls *ACFUNClient) Expression() string {
-	return `https?://(?:www\.)?acfun\.cn/v/ac\d+`
-}
-
-func (cls *ACFUNClient) Args() *Args {
-	return &Args{
+func (cls *ACFUNClient) Meta() *Meta {
+	return &Meta{
 		"www.acfun.com",
 		"acfun",
+		`https?://(?:www\.)?acfun\.cn/v/ac\d+`,
 		Cookie{},
 	}
 }

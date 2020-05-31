@@ -1,7 +1,7 @@
 package cookie
 
 import (
-	"github.com/zhxingy/bogo/spiders"
+	"github.com/zhxingy/bogo/spider"
 	"net/http"
 	"strings"
 )
@@ -24,9 +24,9 @@ func Export(file string)(CookiesJar, error){
 	}
 
 	hostNames := make(map[string][]string)
-	for _, spider := range spiders.Spiders {
-		if spider.Domain().Enable{
-			hostNames[spider.Domain().Name] = spider.Domain().Domain
+	for _, x := range spider.Spiders {
+		if x.Meta().Cookie.Enable{
+			hostNames[x.Meta().Cookie.Name] = x.Meta().Cookie.Domain
 		}
 	}
 

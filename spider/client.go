@@ -1,4 +1,4 @@
-package spiders
+package spider
 
 import (
 	"bytes"
@@ -40,10 +40,11 @@ type Client struct {
 	response  []*Response
 }
 
-type Args struct {
-	Domain string // 网站首页
-	Name   string // 项目名
-	Cookie Cookie
+type Meta struct {
+	Domain     string // 网站首页
+	Name       string // 项目名
+	Expression string
+	Cookie     Cookie
 }
 
 func (cls *Client) request(uri string, params url.Values) (selector selector.Selector, err error) {
@@ -105,21 +106,23 @@ func (cls *Client) fromRequest(uri string, params url.Values, data []byte) (sele
 	return
 }
 
-func (cls *Client) Expression() string {
-	panic("you have to rewrite the method")
-}
-
 func (cls *Client) Request() (err error) {
 	panic("you have to rewrite the method")
 }
 
-func (cls *Client) Response() []*Response{
+func (cls *Client) Response() []*Response {
 	return cls.response
 
 }
 
-func (cls *Client) Args() *Args {
+func (cls *Client) Meta() *Meta {
 	panic("you have to rewrite the method")
+}
+
+func (cls *Client) Initialization(uri string, jar CookiesJar) {
+	cls.Header = http.Header{}
+	cls.CookieJar = jar
+	cls.URL = uri
 }
 
 type Cookie struct {
@@ -159,15 +162,9 @@ func (cls *CookiesJar) SetValue(key, value string) {
 
 }
 
-func (cls *CookiesJar) String ()(cookies string){
+func (cls *CookiesJar) String() (cookies string) {
 	for _, cookie := range *cls {
 		cookies += cookie.Name + "=" + cookie.Value + ";"
 	}
 	return
-}
-
-type Spider interface {
-	Request()error
-	Response() []*Response
-	Expression() string
 }

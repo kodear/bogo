@@ -1,4 +1,4 @@
-package spiders
+package spider
 
 import (
 	"errors"
@@ -9,17 +9,11 @@ type YUESPClient struct {
 	Client
 }
 
-func (cls *YUESPClient) Expression() string {
-	// http://www.yuesp.com/play/index6424-1-0.html
-	// http://www.yuesp.com/play/index6424-0-20.html
-	// http://www.yuesp.com/play/index6783-0-0.html
-	return `https?://(?:www\.)?yuesp\.com/play/index(\d+)`
-}
-
-func (cls *YUESPClient) Args() *Args {
-	return &Args{
+func (cls *YUESPClient) Meta() *Meta {
+	return &Meta{
 		"www.yuesp.com",
 		"粤视频",
+		`https?://(?:www\.)?yuesp\.com/play/index(\d+)`,
 		Cookie{},
 	}
 }

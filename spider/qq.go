@@ -1,4 +1,4 @@
-package spiders
+package spider
 
 import (
 	"encoding/json"
@@ -17,14 +17,11 @@ type QQClient struct {
 	Client
 }
 
-func (cls *QQClient) Expression() string {
-	return `https?://(?:v\.|www\.)?qq\.(com|cn)/x/(?:cover|page)/(?:[a-z\d]+/)?(?P<id>[a-z\d]+)`
-}
-
-func (cls *QQClient) Args() *Args {
-	return &Args{
+func (cls *QQClient) Meta() *Meta {
+	return &Meta{
 		"v.qq.com.com",
 		"腾讯视频",
+		`https?://(?:v\.|www\.)?qq\.(com|cn)/x/(?:cover|page)/(?:[a-z\d]+/)?(?P<id>[a-z\d]+)`,
 		Cookie{
 			"qq",
 			true,
@@ -48,12 +45,11 @@ func (cls *QQClient) Request() (err error) {
 	uid := cls.guid()
 
 	cresponse, err := cls.request("http://111.59.199.42:9999/ckey?", url.Values{
-		"vid": []string{vid},
+		"vid":  []string{vid},
 		"guid": []string{uid},
-		"tm": []string{strconv.Itoa(tm)},
+		"tm":   []string{strconv.Itoa(tm)},
 	})
-
-	if err != nil{
+	if err != nil {
 		return exception.AuthKeyException(err)
 	}
 	key := cresponse.String()
@@ -68,7 +64,6 @@ func (cls *QQClient) Request() (err error) {
 		"g_actk":  []string{strconv.Itoa(cls.sign(cls.CookieJar.Name("vqq_access_token")))},
 		"_":       []string{strconv.Itoa(tm * 1000)},
 	})
-
 	if err == nil {
 		var auth struct {
 			Errcode     int    `json:"errcode"`
@@ -78,17 +73,15 @@ func (cls *QQClient) Request() (err error) {
 		}
 
 		err = response.ReByJson(`data=(.*)`, &auth)
-		if auth.AccessToken == "" || auth.Vusession == "" || auth.Vuserid == 0{
-			return exception.ServerAuthException(errors.New("qq video auth error."))
-		}
-
+		//if auth.AccessToken == "" || auth.Vusession == "" || auth.Vuserid == 0{
+		//	return exception.ServerAuthException(errors.New("qq video auth error."))
+		//}
 		if err != nil && auth.Errcode == 0 {
 			cls.CookieJar.SetValue("vqq_vusession", auth.Vusession)
 			cls.CookieJar.SetValue("vqq_access_token", auth.AccessToken)
 			cls.CookieJar.SetValue("vqq_vuserid", strconv.Itoa(auth.Vuserid))
 		}
 	}
-
 
 	type postJson struct {
 		Buid       string `json:"buid"`
@@ -138,13 +131,14 @@ func (cls *QQClient) Request() (err error) {
 				"dlver":       []string{"2"},
 			}.Encode(),
 		})
-
 		response, err := cls.fromRequest("https://vd.l.qq.com/proxyhttp", nil, body)
 		if err != nil {
-			if index < 3 || len(cls.response) > 0{
-				continue
-			}else {
+			if index == 3 && len(cls.response) == 0 {
 				return exception.HTTPJsonException(err)
+			} else if len(cls.response) > 0 {
+				return nil
+			} else {
+				continue
 			}
 		}
 
@@ -154,16 +148,18 @@ func (cls *QQClient) Request() (err error) {
 		}
 		err = response.Json(&vjson)
 		if err != nil {
-			if index < 3 || len(cls.response) > 0{
-				continue
-			}else {
+			if index == 3 && len(cls.response) == 0 {
 				return exception.JSONParseException(err)
+			} else if len(cls.response) > 0 {
+				return nil
+			} else {
+				continue
 			}
 		}
 		if vjson.ErrCode != 0 {
-			if index < 3 || len(cls.response) > 0{
+			if index < 3 || len(cls.response) > 0 {
 				continue
-			}else {
+			} else {
 				return exception.ServerAuthException(errors.New("qq video code: " + strconv.Itoa(vjson.ErrCode)))
 			}
 		}
@@ -200,16 +196,22 @@ func (cls *QQClient) Request() (err error) {
 		}
 		err = json.Unmarshal([]byte(vjson.Vinfo), &video)
 		if err != nil {
-			return exception.JSONParseException(err)
-		}
-
-		if video.Msg != "" {
-			if index < 3 || len(cls.response) > 0{
+			if index == 3 && len(cls.response) == 0 {
+				return exception.JSONParseException(err)
+			} else if len(cls.response) > 0 {
+				return nil
+			} else {
 				continue
-			}else{
-				return exception.ServerAuthException(errors.New(video.Msg))
 			}
-
+		}
+		if video.Msg != "" {
+			if index == 3 && len(cls.response) == 0 {
+				return exception.ServerAuthException(errors.New(video.Msg))
+			} else if len(cls.response) > 0 {
+				return nil
+			} else {
+				continue
+			}
 		}
 
 		var id int

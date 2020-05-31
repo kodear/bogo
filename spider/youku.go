@@ -1,4 +1,4 @@
-package spiders
+package spider
 
 import (
 	"errors"
@@ -12,14 +12,11 @@ type YOUKUClient struct {
 	Client
 }
 
-func (cls *YOUKUClient) Expression() string {
-	return `https?://(?:v\.|player\.|video\.)?(?:youku|tudou)\.com/(?:v_show|v_nextstage|embed|v)/(?:id_)?(?P<vid>[a-zA-Z\d]+={0,2})`
-}
-
-func (cls *YOUKUClient) Args() *Args {
-	return &Args{
+func (cls *YOUKUClient) Meta() *Meta {
+	return &Meta{
 		"www.youku.com",
 		"优酷视频",
+		`https?://(?:v\.|player\.|video\.)?(?:youku|tudou)\.com/(?:v_show|v_nextstage|embed|v)/(?:id_)?(?P<vid>[a-zA-Z\d]+={0,2})`,
 		Cookie{
 			"youku",
 			true,
@@ -32,7 +29,7 @@ func (cls *YOUKUClient) Request() (err error) {
 	var vid string
 	var x selector.Selector
 	x = []byte(cls.URL)
-	err = x.Re(cls.Expression(), &vid)
+	err = x.Re(cls.Meta().Expression, &vid)
 	if err != nil {
 		return exception.TextParseException(err)
 	}
@@ -111,7 +108,7 @@ func (cls *YOUKUClient) Request() (err error) {
 			StreamType: stream.StreamType,
 			Quality:    quality,
 			Links: []URLAttr{
-				URLAttr{
+				{
 					URL:   stream.Url,
 					Order: 0,
 					Size:  stream.StreamExt.Size,

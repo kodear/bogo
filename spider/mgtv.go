@@ -1,4 +1,4 @@
-package spiders
+package spider
 
 import (
 	"encoding/base64"
@@ -16,17 +16,11 @@ type MGTVClient struct {
 	Client
 }
 
-func (cls *MGTVClient) Expression() string {
-	// https://www.mgtv.com/b/332228/6589904.html?fpa=55&fpos=2
-	// https://www.mgtv.com/b/304167/3971620.html
-	// https://www.mgtv.com/l/99999286/6607635.html?fpa=1173&fpos=2
-	return `https?://(?:www\.)?mgtv\.com/(?:b|l)/\d+/(?P<id>\d+)`
-}
-
-func (cls *MGTVClient) Args() *Args {
-	return &Args{
+func (cls *MGTVClient) Meta() *Meta {
+	return &Meta{
 		"www.mgtv.com",
 		"芒果TV",
+		`https?://(?:www\.)?mgtv\.com/(?:b|l)/\d+/(?P<id>\d+)`,
 		Cookie{
 			"mgtv",
 			true,
@@ -39,7 +33,7 @@ func (cls *MGTVClient) Request() (err error) {
 	var vid string
 	var x selector.Selector
 	x = []byte(cls.URL)
-	err = x.Re(cls.Expression(), &vid)
+	err = x.Re(cls.Meta().Expression, &vid)
 	if err != nil {
 		return exception.TextParseException(err)
 	}

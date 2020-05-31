@@ -1,4 +1,4 @@
-package spiders
+package spider
 
 import (
 	"encoding/json"
@@ -10,14 +10,11 @@ type ACFUNBangUmiClient struct {
 	Client
 }
 
-func (cls *ACFUNBangUmiClient) Expression() string {
-	return `https?://(?:www\.)?acfun\.cn/bangumi/`
-}
-
-func (cls *ACFUNBangUmiClient) Args() *Args {
-	return &Args{
+func (cls *ACFUNBangUmiClient) Meta() *Meta {
+	return &Meta{
 		"www.acfun.com",
 		"acfun番剧",
+		`https?://(?:www\.)?acfun\.cn/bangumi/`,
 		Cookie{},
 	}
 }

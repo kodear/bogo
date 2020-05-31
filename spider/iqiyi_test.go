@@ -1,4 +1,4 @@
-package spiders
+package spider
 
 import (
 	"net/http"
@@ -18,4 +18,3 @@ func TestIQIYIClient_Request(t *testing.T) {
 	}
 
 }
-

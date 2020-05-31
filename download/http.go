@@ -163,11 +163,11 @@ func (h *HTTPSegFLV) Do(link, text, file, fname string, links []string) {
 				break
 			}
 
-			if header.TagType == 8 {
+			if header.TagType == flv.AUDIO_TAG {
 				nowAudioTime = header.Timestamp
 				err = flvFile.WriteAudioTag(data, header.Timestamp+audioTime)
 
-			} else if header.TagType == 9 {
+			} else if header.TagType == flv.VIDEO_TAG {
 				nowVideoTime = header.Timestamp
 				err = flvFile.WriteVideoTag(data, header.Timestamp+videoTime)
 			}

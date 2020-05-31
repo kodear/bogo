@@ -13,15 +13,35 @@ func (cls *HTTPFileDownloader) Meta() *Meta {
 }
 
 func (cls *HTTPFileDownloader) start() {
+	defer 	close(cls.status.ch)
+
 	file, err := os.Create(cls.file)
 	if err != nil {
 		cls.status.Msg = err
 		return
 	}
-	err = cls.request(cls.urls[0], file)
+	defer func() {_ = file.Close()}()
+
+	res, err := cls.request(cls.urls[0])
 	if err != nil {
 		cls.status.Msg = err
+		return
 	}
-	_ = file.Close()
-	close(cls.status.ch)
+
+	// 获取视频大小
+	if cls.status.MaxLength == 0 {
+		cls.status.MaxLength = cls.length(res)
+	}
+
+	// 开始下载
+	err = cls.download(res, file)
+	if err != nil{
+		cls.status.Msg = err
+		return
+	}
+
+}
+
+func (cls *HTTPFileDownloader)  Start(){
+	go cls.start()
 }

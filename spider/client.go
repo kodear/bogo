@@ -106,17 +106,17 @@ func (cls *Client) fromRequest(uri string, params url.Values, data []byte) (sele
 	return
 }
 
+func (cls *Client) Meta() *Meta {
+	panic("this method must be implemented by subclasses")
+}
+
 func (cls *Client) Request() (err error) {
-	panic("you have to rewrite the method")
+	panic("this method must be implemented by subclasses")
 }
 
 func (cls *Client) Response() []*Response {
 	return cls.response
 
-}
-
-func (cls *Client) Meta() *Meta {
-	panic("you have to rewrite the method")
 }
 
 func (cls *Client) Initialization(uri string, jar CookiesJar) {

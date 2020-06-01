@@ -134,13 +134,7 @@ func (cls *QQClient) Request() (err error) {
 		})
 		response, err := cls.fromRequest("https://vd.l.qq.com/proxyhttp", nil, body)
 		if err != nil {
-			if index == 3 && len(cls.response) == 0 {
-				return exception.HTTPJsonException(err)
-			} else if len(cls.response) > 0 {
-				return nil
-			} else {
-				continue
-			}
+			return exception.HTTPJsonException(err)
 		}
 
 		var vjson struct {
@@ -149,20 +143,12 @@ func (cls *QQClient) Request() (err error) {
 		}
 		err = response.Json(&vjson)
 		if err != nil {
-			if index == 3 && len(cls.response) == 0 {
-				return exception.JSONParseException(err)
-			} else if len(cls.response) > 0 {
-				return nil
-			} else {
-				continue
-			}
+			return exception.JSONParseException(err)
 		}
-		if vjson.ErrCode != 0 {
-			if index < 3 || len(cls.response) > 0 {
-				continue
-			} else {
-				return exception.ServerAuthException(errors.New("qq video code: " + strconv.Itoa(vjson.ErrCode)))
-			}
+		if vjson.ErrCode != 0 && len(cls.response) > 0 {
+			return
+		} else if vjson.ErrCode != 0 {
+			return exception.ServerAuthException(errors.New("qq video code: " + strconv.Itoa(vjson.ErrCode)))
 		}
 
 		var video struct {
@@ -197,22 +183,12 @@ func (cls *QQClient) Request() (err error) {
 		}
 		err = json.Unmarshal([]byte(vjson.Vinfo), &video)
 		if err != nil {
-			if index == 3 && len(cls.response) == 0 {
-				return exception.JSONParseException(err)
-			} else if len(cls.response) > 0 {
-				return nil
-			} else {
-				continue
-			}
+			return exception.JSONParseException(err)
 		}
-		if video.Msg != "" {
-			if index == 3 && len(cls.response) == 0 {
-				return exception.ServerAuthException(errors.New(video.Msg))
-			} else if len(cls.response) > 0 {
-				return nil
-			} else {
-				continue
-			}
+		if video.Msg != "" && len(cls.response) > 0 {
+			return
+		} else if video.Msg != "" {
+			return exception.ServerAuthException(errors.New(video.Msg))
 		}
 
 		var id int

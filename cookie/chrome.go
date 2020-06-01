@@ -1,4 +1,5 @@
 package cookie
+
 //
 //import (
 //	"bytes"
@@ -143,6 +144,3 @@ package cookie
 //
 //	return cookies, nil
 //}
-
-
-

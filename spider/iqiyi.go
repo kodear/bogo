@@ -76,7 +76,7 @@ func (cls *IQIYIClient) Request() (err error) {
 	}
 
 	cls.Header.Add("Referer", cls.URL)
-	for index, qualityID := range []int{100, 200, 300, 500, 600, 610} {
+	for _, qualityID := range []int{100, 200, 300, 500, 600, 610} {
 		uri, err := cls.cmd5x("https://cache.video.iqiyi.com/dash?" + url.Values{
 			"tvid":          []string{tvid},
 			"vid":           []string{vid},
@@ -119,13 +119,10 @@ func (cls *IQIYIClient) Request() (err error) {
 
 		response, err = cls.request(uri, nil)
 		if err != nil {
-			if index == 5 && len(cls.response) == 0 {
-				return exception.HTTPJsonException(err)
-			} else if len(cls.response) > 0 {
-				return nil
-			} else {
-				continue
+			if len(cls.response) > 0 {
+				goto End
 			}
+			return exception.HTTPJsonException(err)
 		}
 
 		var vjson struct {
@@ -155,26 +152,23 @@ func (cls *IQIYIClient) Request() (err error) {
 						} `json:"fs"`
 					} `json:"video"`
 				} `json:"program"`
+				BossTs struct {
+					Msg  string `json:"msg"`
+					Code string `json:"code"`
+				} `json:"boss_ts"`
 			} `json:"data"`
 		}
+
 		err = response.Json(&vjson)
 		if err != nil {
-			if index == 5 && len(cls.response) == 0 {
-				return exception.JSONParseException(err)
-			} else if len(cls.response) > 0 {
-				return nil
-			} else {
-				continue
-			}
+			return exception.JSONParseException(err)
 		}
-		if vjson.Code != "A00000" {
-			if index == 5 && len(cls.response) == 0 {
-				return exception.ServerAuthException(err)
-			} else if len(cls.response) > 0 {
-				return nil
-			} else {
-				continue
+
+		if vjson.Code != "A00000" || len(vjson.Data.Program.Video) == 0 {
+			if len(cls.response) > 0 {
+				goto End
 			}
+			return exception.ServerAuthException(errors.New(vjson.Data.BossTs.Msg))
 		}
 
 		for _, video := range vjson.Data.Program.Video {
@@ -221,13 +215,7 @@ func (cls *IQIYIClient) Request() (err error) {
 
 						response, err := cls.request(uri+"&ibt="+sign, nil)
 						if err != nil {
-							if index == 5 && len(cls.response) == 0 {
-								return exception.HTTPJsonException(err)
-							} else if len(cls.response) > 0 {
-								return nil
-							} else {
-								goto End
-							}
+							return exception.HTTPJsonException(err)
 						}
 
 						var us struct {
@@ -235,13 +223,7 @@ func (cls *IQIYIClient) Request() (err error) {
 						}
 						err = response.Json(&us)
 						if err != nil {
-							if index == 5 && len(cls.response) == 0 {
-								return exception.JSONParseException(err)
-							} else if len(cls.response) > 0 {
-								return nil
-							} else {
-								goto End
-							}
+							return exception.JSONParseException(err)
 						}
 
 						urlAttrs = append(urlAttrs, URLAttr{
@@ -274,14 +256,13 @@ func (cls *IQIYIClient) Request() (err error) {
 				break
 			}
 		}
-	End:
-		continue
 	}
 
 	if len(cls.response) < 1 {
 		return exception.OtherException(errors.New(""))
 	}
 
+End:
 	x := make(map[int]*Response)
 	for _, response := range cls.response {
 		x[response.ID] = response

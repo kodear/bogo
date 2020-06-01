@@ -136,11 +136,11 @@ func (cls *BILIBILIBangUmiClient) Request() (err error) {
 			format = "flv"
 		}
 
-		if len(links) > 1 {
+		if len(links) == 1 {
 			protocol = "http"
-		} else if len(links) >= 1 && format == "flv" {
+		} else if len(links) > 1 && format == "flv" {
 			protocol = "flv"
-		} else if len(links) >= 1 && format == "mp4" {
+		} else if len(links) > 1 && format == "mp4" {
 			protocol = "ism"
 		}
 

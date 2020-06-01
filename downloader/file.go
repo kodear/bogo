@@ -10,11 +10,12 @@ import (
 )
 
 type Status struct {
-	Code    int
-	Msg     error
+	Code      int
+	Msg       error
 	Length    int
 	MaxLength int
-	ch      chan int
+	Byte      int
+	ch        chan int
 }
 
 type Meta struct {
@@ -22,10 +23,10 @@ type Meta struct {
 }
 
 type FileDownloader struct {
-	urls       []string
-	file       string
-	header     http.Header
-	status     Status
+	urls   []string
+	file   string
+	header http.Header
+	status Status
 }
 
 func (cls *FileDownloader) Initialize(filename string, urls []string, size int, header http.Header) {
@@ -34,11 +35,11 @@ func (cls *FileDownloader) Initialize(filename string, urls []string, size int, 
 	ch := make(chan int, 1000)
 	cls.header = header
 	cls.status = Status{
-		Code:    0,
-		Msg:     nil,
+		Code:      0,
+		Msg:       nil,
 		Length:    0,
 		MaxLength: size,
-		ch:      ch,
+		ch:        ch,
 	}
 }
 
@@ -68,37 +69,32 @@ func (cls *FileDownloader) request(uri string) (res *http.Response, err error) {
 	return
 }
 
-func (cls *FileDownloader) length (res *http.Response) int{
+func (cls *FileDownloader) length(res *http.Response) int {
 	l, _ := strconv.Atoi(res.Header["Content-Length"][0])
 	return l
 }
 
-func (cls *FileDownloader) download (res *http.Response, file *os.File)(err error){
-		defer func() {_ = res.Body.Close()}()
-
-		buf := make([]byte, 4096)
-		for {
-			n, err := res.Body.Read(buf)
-			if n > 0 {
-				_, _ = file.Write(buf[:n])
-			} else if err != nil && err == io.EOF {
-				break
-			} else if err != nil {
-				return err
-			}
-
-			cls.status.ch <- n
+func (cls *FileDownloader) download(res *http.Response, file *os.File) (err error) {
+	defer func() { _ = res.Body.Close() }()
+	buf := make([]byte, 4096)
+	for {
+		n, err := res.Body.Read(buf)
+		if n > 0 {
+			_, _ = file.Write(buf[:n])
+		} else if err != nil && err == io.EOF {
+			break
+		} else if err != nil {
+			return err
 		}
-		return
+		cls.status.Byte += n
+		cls.status.ch <- n
+	}
+	return
 }
 
 func (cls *FileDownloader) start() {
 	panic("this method must be implemented by subclasses")
 }
-
-//func (cls *FileDownloader) Start() {
-//	go cls.start()
-//}
 
 func (cls *FileDownloader) Status() Status {
 	return cls.status
@@ -117,4 +113,3 @@ func (cls *FileDownloader) Wait() (err error) {
 
 	return
 }
-

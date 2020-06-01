@@ -9,7 +9,7 @@ func TestBILIBILIBangUmiClient_Request(t *testing.T) {
 	test := BILIBILIBangUmiClient{
 		Client{
 			Header: http.Header{},
-			URL:    "https://www.bilibili.com/bangumi/play/ep267851",
+			URL:    "https://www.bilibili.com/bangumi/play/ep15014",
 		},
 	}
 	err := test.Request()

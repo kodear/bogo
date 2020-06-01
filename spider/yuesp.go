@@ -3,6 +3,7 @@ package spider
 import (
 	"errors"
 	"github.com/zhxingy/bogo/exception"
+	"net/http"
 )
 
 type YUESPClient struct {
@@ -70,7 +71,7 @@ func (cls *YUESPClient) Request() (err error) {
 			},
 		},
 		DownloadProtocol: protocol,
-		DownloadHeaders:  map[string]string{"User-Agent": UserAgent, "Referer": newUrl},
+		DownloadHeaders:  http.Header{"Referer": []string{cls.URL}, "User-Agent": []string{UserAgent}},
 	})
 
 	return

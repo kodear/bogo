@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/zhxingy/bogo/exception"
 	"github.com/zhxingy/bogo/selector"
+	"net/http"
 	"net/url"
 	"strconv"
 )
@@ -168,7 +169,7 @@ func (cls *BILIBILIClient) Request() (err error) {
 			Quality:          qualityIDByString[json.Data.Quality],
 			Links:            links,
 			DownloadProtocol: protocol,
-			DownloadHeaders:  map[string]string{"Referer": cls.URL, "User-Agent": UserAgent},
+			DownloadHeaders:  http.Header{"Referer": []string{cls.URL}, "User-Agent": []string{UserAgent}},
 		})
 	}
 

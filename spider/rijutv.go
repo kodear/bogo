@@ -3,6 +3,7 @@ package spider
 import (
 	"fmt"
 	"github.com/zhxingy/bogo/exception"
+	"net/http"
 )
 
 type RIJUTVClient struct {
@@ -43,7 +44,6 @@ func (cls *RIJUTVClient) Request() (err error) {
 
 	err = response.Re(`url:'(.*)',\n`, &url)
 	if err != nil {
-		fmt.Println("http:" + urlPath)
 		return exception.HTMLParseException(err)
 	}
 
@@ -58,7 +58,7 @@ func (cls *RIJUTVClient) Request() (err error) {
 				URL: url,
 			},
 		},
-		DownloadHeaders:  map[string]string{"User-Agent": UserAgent, "Referer": url},
+		DownloadHeaders:  http.Header{"Referer": []string{cls.URL}, "User-Agent": []string{UserAgent}},
 		DownloadProtocol: "hls",
 	})
 

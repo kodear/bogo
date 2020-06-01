@@ -3,6 +3,7 @@ package spider
 import (
 	"errors"
 	"github.com/zhxingy/bogo/exception"
+	"net/http"
 	"net/url"
 	"strconv"
 )
@@ -155,7 +156,7 @@ func (cls *BILIBILIBangUmiClient) Request() (err error) {
 			Quality:          qualityIDByString[json.Data.Quality],
 			Links:            links,
 			DownloadProtocol: protocol,
-			DownloadHeaders:  map[string]string{"Referer": cls.URL, "User-Agent": UserAgent},
+			DownloadHeaders:  http.Header{"Referer": []string{cls.URL}, "User-Agent": []string{UserAgent}},
 		})
 	}
 

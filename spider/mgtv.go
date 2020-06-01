@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/zhxingy/bogo/exception"
 	"github.com/zhxingy/bogo/selector"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -148,7 +149,7 @@ func (cls *MGTVClient) Request() (err error) {
 					URL: video.Info,
 				},
 			},
-			DownloadHeaders:  map[string]string{"Referer": cls.URL},
+			DownloadHeaders:  http.Header{"Referer": []string{cls.URL}, "User-Agent": []string{UserAgent}},
 			DownloadProtocol: "hls",
 		})
 	}

@@ -28,7 +28,7 @@ type Response struct {
 	StreamType       string //视频类型
 	Quality          string // 视频质量
 	Links            []URLAttr
-	DownloadHeaders  map[string]string // 下载视频需要的请求头
+	DownloadHeaders  http.Header // 下载视频需要的请求头
 	DownloadProtocol string            //视频下载协议
 }
 

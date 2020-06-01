@@ -17,59 +17,16 @@ func (cls *HLSFileDownloader) Meta() *Meta {
 }
 
 func (cls *HLSFileDownloader) start() {
-	defer close(cls.status.ch)
-
-	file, err := os.Create(cls.file)
+	reader, err := cls.open()
 	if err != nil {
-		cls.status.Msg = err
-		return
+		cls.DownloadStatus.Msg = err
+	}else{
+		cls.run(reader)
 	}
-	defer func() { _ = file.Close() }()
+}
 
-	res, err := cls.request(cls.urls[0])
-	if err != nil {
-		cls.status.Msg = err
-		return
-	}
-
-	playlist, err := cls.parse(res.Body)
-	if err != nil {
-		return
-	}
-
-	cls.status.MaxLength = len(playlist.Segments)
-
-	var key []byte
-	if playlist.Key != nil {
-		res, err := cls.request(playlist.Key.URI)
-		if err != nil {
-			return
-		}
-		key, err = ioutil.ReadAll(res.Body)
-		if err != nil {
-			return
-		}
-		_ = res.Body.Close()
-	}
-
-	for _, segment := range playlist.Segments {
-		if segment == nil {
-			break
-		}
-
-		res, err := cls.request(urlJoin(cls.urls[0], segment.URI))
-		if err != nil {
-			return
-		}
-
-		err = cls.download(res, file, key)
-		if err != nil {
-			return
-		}
-	}
-
-	return
-
+func (cls *HLSFileDownloader) Start() {
+	go cls.start()
 }
 
 func (cls *HLSFileDownloader) download(res *http.Response, file *os.File, key []byte) (err error) {
@@ -91,14 +48,10 @@ func (cls *HLSFileDownloader) download(res *http.Response, file *os.File, key []
 		return
 	}
 
-	cls.status.Byte += n
-	cls.status.ch <- 1
+	cls.DownloadStatus.Byte += n
+	cls.DownloadStatus.ch <- 1
 
 	return
-}
-
-func (cls *HLSFileDownloader) Start() {
-	go cls.start()
 }
 
 func (cls *HLSFileDownloader) parse(reader io.Reader) (playlist *m3u8.MediaPlaylist, err error) {
@@ -111,7 +64,7 @@ func (cls *HLSFileDownloader) parse(reader io.Reader) (playlist *m3u8.MediaPlayl
 	case m3u8.MASTER:
 		masterPlaylist := hls.(*m3u8.MasterPlaylist)
 		variants := masterPlaylist.Variants[len(masterPlaylist.Variants)-1]
-		masterURL := urlJoin(cls.urls[0], variants.URI)
+		masterURL := urlJoin(cls.URL, variants.URI)
 		res, err := cls.request(masterURL)
 		if err != nil {
 			return nil, err
@@ -124,4 +77,68 @@ func (cls *HLSFileDownloader) parse(reader io.Reader) (playlist *m3u8.MediaPlayl
 	}
 
 	return
+}
+
+func (cls *HLSFileDownloader) open()(io.Reader, error){
+	res, err := cls.request(cls.URL)
+	if err != nil {
+		return nil, err
+	}
+
+	return  res.Body, nil
+}
+
+func (cls *HLSFileDownloader) run(reader io.Reader) {
+	defer close(cls.DownloadStatus.ch)
+
+	file, err := os.Create(cls.File)
+	if err != nil {
+		cls.DownloadStatus.Msg = err
+		return
+	}
+	defer func() { _ = file.Close() }()
+
+	playlist, err := cls.parse(reader)
+	if err != nil {
+		cls.DownloadStatus.Msg = err
+		return
+	}
+
+	cls.DownloadStatus.MaxLength = len(playlist.Segments)
+
+	var key []byte
+	if playlist.Key != nil {
+		res, err := cls.request(playlist.Key.URI)
+		if err != nil {
+			cls.DownloadStatus.Msg = err
+			return
+		}
+		key, err = ioutil.ReadAll(res.Body)
+		if err != nil {
+			cls.DownloadStatus.Msg = err
+			return
+		}
+		_ = res.Body.Close()
+	}
+
+	for _, segment := range playlist.Segments {
+		if segment == nil {
+			break
+		}
+
+		res, err := cls.request(urlJoin(cls.URL, segment.URI))
+		if err != nil {
+			cls.DownloadStatus.Msg = err
+			return
+		}
+
+		err = cls.download(res, file, key)
+		if err != nil {
+			cls.DownloadStatus.Msg = err
+			return
+		}
+	}
+
+	return
+
 }

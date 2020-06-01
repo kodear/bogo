@@ -14,51 +14,51 @@ func (cls *FLVFileDownloader) Meta() *Meta {
 }
 
 func (cls *FLVFileDownloader) start() {
-	defer close(cls.status.ch)
+	defer close(cls.DownloadStatus.ch)
 
 	// 获取视频大小
-	for _, url := range cls.urls {
+	for _, url := range cls.URLS {
 		res, err := cls.request(url)
 		if err != nil {
-			cls.status.Msg = err
+			cls.DownloadStatus.Msg = err
 			return
 		}
-		cls.status.MaxLength += cls.length(res)
+		cls.DownloadStatus.MaxLength += cls.length(res)
 	}
 
-	flvFile, err := flv.CreateFile(cls.file)
+	flvFile, err := flv.CreateFile(cls.File)
 	if err != nil {
-		cls.status.Msg = err
+		cls.DownloadStatus.Msg = err
 		return
 	}
 	defer flvFile.Close()
 	var flvVideoTimestamp, flvAudioTimestamp uint32
 
-	temporaryFile := cls.file + ".temporary"
-	for _, url := range cls.urls {
+	temporaryFile := cls.File + ".temporary"
+	for _, url := range cls.URLS {
 		tf, err := os.Create(temporaryFile)
 		if err != nil {
-			cls.status.Msg = err
+			cls.DownloadStatus.Msg = err
 			return
 		}
 
 		res, err := cls.request(url)
 		if err != nil {
-			cls.status.Msg = err
+			cls.DownloadStatus.Msg = err
 			return
 		}
 
 		// 开始下载
 		err = cls.download(res, tf)
 		if err != nil {
-			cls.status.Msg = err
+			cls.DownloadStatus.Msg = err
 			return
 		}
 
 		_ = tf.Close()
 		err = cls.join(temporaryFile, flvFile, &flvVideoTimestamp, &flvAudioTimestamp)
 		if err != nil {
-			cls.status.Msg = err
+			cls.DownloadStatus.Msg = err
 			return
 		}
 	}

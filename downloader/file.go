@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-type Status struct {
+type DownloadStatus struct {
 	Code      int
 	Msg       error
 	Length    int
@@ -23,28 +23,46 @@ type Meta struct {
 }
 
 type FileDownloader struct {
-	urls   []string
-	file   string
-	header http.Header
-	status Status
+	URL            string
+	URLS           []string
+	File           string
+	Header         http.Header
+	DownloadStatus DownloadStatus
 }
 
-func (cls *FileDownloader) Initialize(filename string, urls []string, size int, header http.Header) {
-	cls.file = filename
-	cls.urls = urls
-	ch := make(chan int, 1000)
-	cls.header = header
-	cls.status = Status{
-		Code:      0,
-		Msg:       nil,
-		Length:    0,
-		MaxLength: size,
-		ch:        ch,
+func (cls *FileDownloader) Initialize(filename string, urls []string, header http.Header) {
+	cls.File = filename
+	cls.URLS = urls
+	cls.URL = urls[0]
+	cls.Header = header
+	cls.DownloadStatus = DownloadStatus{
+		Code:   0,
+		Msg:    nil,
+		Length: 0,
+		ch:     make(chan int, 1000),
 	}
 }
 
 func (cls *FileDownloader) Meta() *Meta {
 	panic("this method must be implemented by subclasses")
+}
+
+func (cls *FileDownloader) Status() DownloadStatus {
+	return cls.DownloadStatus
+}
+
+func (cls *FileDownloader) Wait() (err error) {
+	for {
+		if _, ok := <-cls.DownloadStatus.ch; !ok {
+			break
+		}
+	}
+
+	if cls.DownloadStatus.Msg != nil {
+		return cls.DownloadStatus.Msg
+	}
+
+	return
 }
 
 func (cls *FileDownloader) request(uri string) (res *http.Response, err error) {
@@ -54,7 +72,7 @@ func (cls *FileDownloader) request(uri string) (res *http.Response, err error) {
 		return
 	}
 
-	req.Header = cls.header
+	req.Header = cls.Header
 	res, err = client.Do(req)
 	if err != nil {
 		return
@@ -86,30 +104,8 @@ func (cls *FileDownloader) download(res *http.Response, file *os.File) (err erro
 		} else if err != nil {
 			return err
 		}
-		cls.status.Byte += n
-		cls.status.ch <- n
+		cls.DownloadStatus.Byte += n
+		cls.DownloadStatus.ch <- n
 	}
-	return
-}
-
-func (cls *FileDownloader) start() {
-	panic("this method must be implemented by subclasses")
-}
-
-func (cls *FileDownloader) Status() Status {
-	return cls.status
-}
-
-func (cls *FileDownloader) Wait() (err error) {
-	for {
-		if _, ok := <-cls.status.ch; !ok {
-			break
-		}
-	}
-
-	if cls.status.Msg != nil {
-		return cls.status.Msg
-	}
-
 	return
 }

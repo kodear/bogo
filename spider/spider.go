@@ -45,3 +45,6 @@ func Do(uri string, jar []*http.Cookie) ([]*Response, error) {
 
 	return ie.Response(), nil
 }
+
+
+

@@ -7,8 +7,9 @@ import (
 )
 
 func main() {
-	response, err := spider.Do("https://www.bilibili.com/bangumi/play/ep15014", nil)
-	if err != nil{
+
+	response, err := spider.Do("http://www.bilibili.com/index.mp4/1", nil)
+	if err != nil {
 		panic(err)
 	}
 

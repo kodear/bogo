@@ -2,6 +2,7 @@ package spider
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 )
 
@@ -22,11 +23,14 @@ var Spiders = []Spider{
 	&XIGUAClient{},
 	&YOUKUClient{},
 	&YUESPClient{},
+	&HLSClient{},
+	&HTTPClient{},
 }
 
 func Do(uri string, jar []*http.Cookie) (*Response, error) {
 	var ie Spider
 	for _, spider := range Spiders {
+		fmt.Println(spider.Meta().Name)
 		if match(uri, spider.Meta().Expression) {
 			ie = spider
 			break

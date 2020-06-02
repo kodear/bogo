@@ -7,7 +7,7 @@ import (
 
 type Spider interface {
 	Request() error
-	Response() []*Response
+	Response() *Response
 	Initialization(uri string, jar CookiesJar)
 	Meta() *Meta
 }
@@ -24,7 +24,7 @@ var Spiders = []Spider{
 	&YUESPClient{},
 }
 
-func Do(uri string, jar []*http.Cookie) ([]*Response, error) {
+func Do(uri string, jar []*http.Cookie) (*Response, error) {
 	var ie Spider
 	for _, spider := range Spiders {
 		if match(uri, spider.Meta().Expression) {
@@ -45,6 +45,3 @@ func Do(uri string, jar []*http.Cookie) ([]*Response, error) {
 
 	return ie.Response(), nil
 }
-
-
-

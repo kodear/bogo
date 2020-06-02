@@ -1,9 +1,8 @@
-package selector
+package spider
 
 import (
 	"encoding/json"
 	"errors"
-	"github.com/zhxingy/bogo/exception"
 	"regexp"
 )
 
@@ -45,13 +44,13 @@ func (cls *Selector) ReByJson(pattern string, v interface{}) (err error) {
 	var arg string
 	err = cls.Re(pattern, &arg)
 	if err != nil {
-		return exception.TextParseException(err)
+		return ParseTextErr(err)
 	} else {
 		err = json.Unmarshal([]byte(arg), &v)
 	}
 
 	if err != nil {
-		return exception.JSONParseException(err)
+		return ParseJsonErr(err)
 	}
 
 	return

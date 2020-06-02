@@ -1,17 +1,12 @@
 package spider
 
 import (
-	"net/http"
 	"testing"
 )
 
 func TestACFUNBangUmiClient_Request(t *testing.T) {
-	test := ACFUNBangUmiClient{
-		Client{
-			Header: http.Header{},
-			URL:    "https://www.acfun.cn/bangumi/aa6002267",
-		},
-	}
+	test := ACFUNBangUmiClient{}
+	test.Initialization("https://www.acfun.cn/bangumi/aa6002267", nil)
 	err := test.Request()
 	if err != nil {
 		t.Error(err)

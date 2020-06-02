@@ -2,8 +2,6 @@ package spider
 
 import (
 	"errors"
-	"github.com/zhxingy/bogo/exception"
-	"github.com/zhxingy/bogo/selector"
 	"net/url"
 	"strconv"
 )
@@ -20,18 +18,18 @@ func (cls *YOUKUClient) Meta() *Meta {
 		Cookie: Cookie{
 			Name:   "youku",
 			Enable: true,
-			Domain: []string{".youku.com", "user.youku.com"},
+			Domain: []string{".youku.com"},
 		},
 	}
 }
 
 func (cls *YOUKUClient) Request() (err error) {
 	var vid string
-	var x selector.Selector
-	x = []byte(cls.URL)
-	err = x.Re(cls.Meta().Expression, &vid)
+	var selector Selector
+	selector = []byte(cls.URL)
+	err = selector.Re(cls.Meta().Expression, &vid)
 	if err != nil {
-		return exception.TextParseException(err)
+		return ParseTextErr(err)
 	}
 
 	cls.Header.Add("Referer", "http://player.youku.com/embed/"+vid)
@@ -43,7 +41,7 @@ func (cls *YOUKUClient) Request() (err error) {
 		"utid":      []string{cls.CookieJar.Name("cna")},
 	})
 	if err != nil {
-		return exception.HTTPJsonException(err)
+		return DownloadJsonErr(err)
 	}
 
 	var json struct {
@@ -72,21 +70,26 @@ func (cls *YOUKUClient) Request() (err error) {
 	}
 	err = response.Json(&json)
 	if err != nil {
-		return exception.JSONParseException(err)
+		return ParseJsonErr(err)
 	}
 	if json.Data.Eroor.Code != 0 {
-		return exception.ServerAuthException(errors.New(json.Data.Eroor.Note))
+		return ServerAuthErr(errors.New(json.Data.Eroor.Note))
 	}
 
+	cls.response = &Response{
+		Title:  json.Data.Show.Title,
+		Part:   strconv.Itoa(json.Data.Show.Stage),
+		Stream: []Stream{},
+	}
 	for id, stream := range json.Data.Stream {
 		var quality string
 		for key, value := range map[string][]string{
-			"1080P_hdr": []string{"hls4hd3_sdr"},
-			"1080P":     []string{"mp4hd3v2", "mp4hd3", "cmaf4hd3"},
-			"720P":      []string{"mp4hd2v2", "mp4hd2", "cmaf4hd2"},
-			"540P":      []string{"mp4hd", "cmaf4hd"},
-			"360P":      []string{"mp4sd", "3gphd", "flvhd", "cmaf4sd", "cmaf4ld"},
-			"auto":      []string{"h264"},
+			"1080P_hdr": {"hls4hd3_sdr"},
+			"1080P":     {"mp4hd3v2", "mp4hd3", "cmaf4hd3"},
+			"720P":      {"mp4hd2v2", "mp4hd2", "cmaf4hd2"},
+			"540P":      {"mp4hd", "cmaf4hd"},
+			"360P":      {"mp4sd", "3gphd", "flvhd", "cmaf4sd", "cmaf4ld"},
+			"auto":      {"h264"},
 		} {
 			for _, v := range value {
 				if v == stream.StreamType {
@@ -96,24 +99,16 @@ func (cls *YOUKUClient) Request() (err error) {
 			}
 		}
 
-		cls.response = append(cls.response, &Response{
-			ID:         id + 1,
-			Title:      json.Data.Show.Title,
-			Part:       strconv.Itoa(json.Data.Show.Stage),
-			Format:     "ts",
-			Size:       stream.StreamExt.Size,
-			Duration:   stream.StreamExt.Duration / 1000,
-			Width:      stream.Width,
-			Height:     stream.Height,
-			StreamType: stream.StreamType,
-			Quality:    quality,
-			Links: []URLAttr{
-				{
-					URL:   stream.Url,
-					Order: 0,
-					Size:  stream.StreamExt.Size,
-				},
-			},
+		cls.response.Stream = append(cls.response.Stream, Stream{
+			ID:               id + 1,
+			Format:           "ts",
+			Size:             stream.StreamExt.Size,
+			Duration:         stream.StreamExt.Duration / 1000,
+			Width:            stream.Width,
+			Height:           stream.Height,
+			StreamType:       stream.StreamType,
+			Quality:          quality,
+			URLS:             []string{stream.Url},
 			DownloadHeaders:  nil,
 			DownloadProtocol: "hls",
 		})

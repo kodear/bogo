@@ -2,7 +2,6 @@ package spider
 
 import (
 	"bytes"
-	"github.com/zhxingy/bogo/selector"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -10,16 +9,8 @@ import (
 
 const UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"
 
-type URLAttr struct {
-	URL   string //碎片下载地址
-	Order int    //碎片视频排序
-	Size  int    // 碎片视频大小
-}
-
-type Response struct {
+type Stream struct {
 	ID               int    //视频ID
-	Title            string //视频名称
-	Part             string //视频集数
 	Format           string //视频格式
 	Size             int    //视频大小
 	Duration         int    //视频长度
@@ -27,9 +18,15 @@ type Response struct {
 	Height           int    //视频高
 	StreamType       string //视频类型
 	Quality          string // 视频质量
-	Links            []URLAttr
+	URLS             []string
 	DownloadHeaders  http.Header // 下载视频需要的请求头
-	DownloadProtocol string            //视频下载协议
+	DownloadProtocol string      //视频下载协议
+}
+
+type Response struct {
+	Title  string //视频名称
+	Part   string //视频集数
+	Stream []Stream
 }
 
 type Client struct {
@@ -37,7 +34,7 @@ type Client struct {
 	Proxy     string
 	Header    http.Header
 	CookieJar CookiesJar
-	response  []*Response
+	response  *Response
 }
 
 type Meta struct {
@@ -47,7 +44,7 @@ type Meta struct {
 	Cookie     Cookie
 }
 
-func (cls *Client) request(uri string, params url.Values) (selector selector.Selector, err error) {
+func (cls *Client) request(uri string, params url.Values) (selector Selector, err error) {
 	client := &http.Client{}
 	req, err := http.NewRequest("", uri+params.Encode(), nil)
 	if err != nil {
@@ -76,7 +73,7 @@ func (cls *Client) request(uri string, params url.Values) (selector selector.Sel
 	return
 }
 
-func (cls *Client) fromRequest(uri string, params url.Values, data []byte) (selector selector.Selector, err error) {
+func (cls *Client) fromRequest(uri string, params url.Values, data []byte) (selector Selector, err error) {
 	client := &http.Client{}
 
 	req, err := http.NewRequest("POST", uri+params.Encode(), bytes.NewReader(data))
@@ -114,7 +111,7 @@ func (cls *Client) Request() (err error) {
 	panic("this method must be implemented by subclasses")
 }
 
-func (cls *Client) Response() []*Response {
+func (cls *Client) Response() *Response {
 	return cls.response
 
 }

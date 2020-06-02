@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/zhxingy/bogo/exception"
 	"math"
 	"math/rand"
 	"net/url"
@@ -25,7 +24,7 @@ func (cls *QQClient) Meta() *Meta {
 		Cookie: Cookie{
 			Name:   "qq",
 			Enable: true,
-			Domain: []string{".qq.com", ".video.qq.com"},
+			Domain: []string{".v.qq.com"},
 		},
 	}
 }
@@ -33,13 +32,13 @@ func (cls *QQClient) Meta() *Meta {
 func (cls *QQClient) Request() (err error) {
 	response, err := cls.request(cls.URL, nil)
 	if err != nil {
-		return exception.HTTPHtmlException(err)
+		return DownloadHtmlErr(err)
 	}
 
 	var vid string
 	err = response.Re(`vid=(?P<vid>[a-zA-Z\d]+)&`, &vid)
 	if err != nil {
-		return exception.HTMLParseException(err)
+		return ParseJsonErr(err)
 	}
 
 	tm := int(time.Now().Unix())
@@ -51,7 +50,7 @@ func (cls *QQClient) Request() (err error) {
 		"tm":   []string{strconv.Itoa(tm)},
 	})
 	if err != nil {
-		return exception.AuthKeyException(err)
+		return ServerAuthKeyErr(err)
 	}
 	key := cresponse.String()
 
@@ -90,7 +89,12 @@ func (cls *QQClient) Request() (err error) {
 	}
 
 	cls.CookieJar = nil
-	for index, quality := range []string{"sd", "hd", "shd", "fhd"} {
+	cls.response = &Response{
+		Title:  "",
+		Part:   "",
+		Stream: []Stream{},
+	}
+	for _, quality := range []string{"sd", "hd", "shd", "fhd"} {
 		body, _ := json.Marshal(postJson{
 			"onlyvinfo",
 			url.Values{
@@ -134,7 +138,7 @@ func (cls *QQClient) Request() (err error) {
 		})
 		response, err := cls.fromRequest("https://vd.l.qq.com/proxyhttp", nil, body)
 		if err != nil {
-			return exception.HTTPJsonException(err)
+			return DownloadJsonErr(err)
 		}
 
 		var vjson struct {
@@ -143,12 +147,12 @@ func (cls *QQClient) Request() (err error) {
 		}
 		err = response.Json(&vjson)
 		if err != nil {
-			return exception.JSONParseException(err)
+			return ParseJsonErr(err)
 		}
-		if vjson.ErrCode != 0 && len(cls.response) > 0 {
-			return
+		if vjson.ErrCode != 0 && len(cls.response.Stream) > 0 {
+			return nil
 		} else if vjson.ErrCode != 0 {
-			return exception.ServerAuthException(errors.New("qq video code: " + strconv.Itoa(vjson.ErrCode)))
+			return ServerAuthErr(errors.New("qq video code: " + strconv.Itoa(vjson.ErrCode)))
 		}
 
 		var video struct {
@@ -183,12 +187,12 @@ func (cls *QQClient) Request() (err error) {
 		}
 		err = json.Unmarshal([]byte(vjson.Vinfo), &video)
 		if err != nil {
-			return exception.JSONParseException(err)
+			return ParseJsonErr(err)
 		}
-		if video.Msg != "" && len(cls.response) > 0 {
-			return
+		if video.Msg != "" && len(cls.response.Stream) > 0 {
+			return nil
 		} else if video.Msg != "" {
-			return exception.ServerAuthException(errors.New(video.Msg))
+			return ServerAuthErr(errors.New(video.Msg))
 		}
 
 		var id int
@@ -210,28 +214,21 @@ func (cls *QQClient) Request() (err error) {
 			format = video.Vl.Vi[0].Ul.Ui[0].Hls.Ftype
 			link = video.Vl.Vi[0].Ul.Ui[0].URL + video.Vl.Vi[0].Ul.Ui[0].Hls.Pt
 		} else {
-			format = "mp4"
+			format = "ts"
 			link = video.Vl.Vi[0].Ul.Ui[0].URL
 		}
 
-		cls.response = append(cls.response, &Response{
-			ID:         id,
-			Title:      video.Vl.Vi[0].Ti,
-			Part:       "",
-			Format:     format,
-			Size:       video.Vl.Vi[0].Fs,
-			Duration:   int(duration),
-			Width:      video.Vl.Vi[0].Vw,
-			Height:     video.Vl.Vi[0].Vh,
-			StreamType: streamType,
-			Quality:    quality,
-			Links: []URLAttr{
-				{
-					URL:   link,
-					Order: 0,
-					Size:  video.Vl.Vi[0].Fs,
-				},
-			},
+		cls.response.Title = video.Vl.Vi[0].Ti
+		cls.response.Stream = append(cls.response.Stream, Stream{
+			ID:               id,
+			Format:           format,
+			Size:             video.Vl.Vi[0].Fs,
+			Duration:         int(duration),
+			Width:            video.Vl.Vi[0].Vw,
+			Height:           video.Vl.Vi[0].Vh,
+			StreamType:       streamType,
+			Quality:          quality,
+			URLS:             []string{link},
 			DownloadProtocol: "hls",
 		})
 	}

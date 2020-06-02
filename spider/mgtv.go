@@ -4,8 +4,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/zhxingy/bogo/exception"
-	"github.com/zhxingy/bogo/selector"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -32,11 +30,11 @@ func (cls *MGTVClient) Meta() *Meta {
 
 func (cls *MGTVClient) Request() (err error) {
 	var vid string
-	var x selector.Selector
-	x = []byte(cls.URL)
-	err = x.Re(cls.Meta().Expression, &vid)
+	var selector Selector
+	selector = []byte(cls.URL)
+	err = selector.Re(cls.Meta().Expression, &vid)
 	if err != nil {
-		return exception.TextParseException(err)
+		return ParseTextErr(err)
 	}
 
 	cls.Header.Add("Referer", cls.URL)
@@ -45,7 +43,7 @@ func (cls *MGTVClient) Request() (err error) {
 		"video_id": []string{vid},
 	})
 	if err != nil {
-		return exception.HTTPHtmlException(err)
+		return DownloadHtmlErr(err)
 	}
 
 	var auth struct {
@@ -65,14 +63,13 @@ func (cls *MGTVClient) Request() (err error) {
 	}
 	err = response.Json(&auth)
 	if err != nil {
-
-		return exception.JSONParseException(err)
+		return ParseJsonErr(err)
 	}
 	if auth.Code != 200 {
-		return exception.ServerAuthException(errors.New(auth.Msg))
+		return ServerAuthErr(errors.New(auth.Msg))
 	}
 	if auth.Data.Atc.Pm2 == "" {
-		return exception.ServerAuthException(errors.New("pm not obtained"))
+		return ServerAuthErr(errors.New("pm not obtained"))
 	}
 	response, err = cls.request("https://pcweb.api.mgtv.com/player/getSource?", url.Values{
 		"_support": []string{"10000000"},
@@ -82,7 +79,7 @@ func (cls *MGTVClient) Request() (err error) {
 		"pm2":      []string{auth.Data.Atc.Pm2},
 	})
 	if err != nil {
-		return exception.HTTPJsonException(err)
+		return ParseJsonErr(err)
 	}
 
 	var json struct {
@@ -100,10 +97,10 @@ func (cls *MGTVClient) Request() (err error) {
 	}
 	err = response.Json(&json)
 	if err != nil {
-		return exception.JSONParseException(err)
+		return ParseJsonErr(err)
 	}
 	if json.Code != 200 {
-		return exception.ServerAuthException(errors.New(json.Msg))
+		return ServerAuthErr(errors.New(json.Msg))
 	}
 
 	var QualityIDByString = map[int]string{
@@ -113,6 +110,11 @@ func (cls *MGTVClient) Request() (err error) {
 		4: "1080P",
 	}
 
+	cls.response = &Response{
+		Title:  auth.Data.Info.Title,
+		Part:   auth.Data.Info.Series,
+		Stream: []Stream{},
+	}
 	for _, stream := range json.Data.Stream {
 		if stream.URL == "" {
 			continue
@@ -123,32 +125,26 @@ func (cls *MGTVClient) Request() (err error) {
 		}
 		response, err = cls.request(json.Data.StreamDomain[0]+stream.URL, nil)
 		if err != nil {
-			return exception.HTTPJsonException(err)
+			return DownloadJsonErr(err)
 		}
 
 		err = response.Json(&video)
 		if err != nil {
-			return exception.JSONParseException(err)
+			return ParseJsonErr(err)
 		}
 		if video.Status != "ok" {
-			return exception.ServerAuthException(errors.New(video.Info))
+			return ServerAuthErr(errors.New(video.Info))
 		}
 
 		id, _ := strconv.Atoi(stream.Def)
 		duration, _ := strconv.Atoi(auth.Data.Info.Duration)
-		cls.response = append(cls.response, &Response{
-			ID:         id,
-			Title:      auth.Data.Info.Title,
-			Part:       auth.Data.Info.Series,
-			Format:     "ts",
-			Duration:   duration,
-			StreamType: stream.FileFormat,
-			Quality:    QualityIDByString[id],
-			Links: []URLAttr{
-				{
-					URL: video.Info,
-				},
-			},
+		cls.response.Stream = append(cls.response.Stream, Stream{
+			ID:               id,
+			Format:           "ts",
+			Duration:         duration,
+			StreamType:       stream.FileFormat,
+			Quality:          QualityIDByString[id],
+			URLS:             []string{video.Info},
 			DownloadHeaders:  http.Header{"Referer": []string{cls.URL}, "User-Agent": []string{UserAgent}},
 			DownloadProtocol: "hls",
 		})

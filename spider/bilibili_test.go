@@ -1,20 +1,14 @@
 package spider
 
 import (
-	"net/http"
 	"testing"
 )
 
 func TestBILIBILIClient_Request(t *testing.T) {
-	test := BILIBILIClient{
-		Client{
-			Header: http.Header{},
-			URL:    "https://www.bilibili.com/video/BV1pt41127FZ?p=1",
-		},
-	}
+	test := BILIBILIClient{}
+	test.Initialization("https://www.bilibili.com/video/BV1mx411E7gn", nil)
 	err := test.Request()
 	if err != nil {
 		t.Error(err)
 	}
-
 }

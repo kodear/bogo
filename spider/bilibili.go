@@ -2,8 +2,6 @@ package spider
 
 import (
 	"errors"
-	"github.com/zhxingy/bogo/exception"
-	"github.com/zhxingy/bogo/selector"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -29,7 +27,7 @@ func (cls *BILIBILIClient) Meta() *Meta {
 func (cls *BILIBILIClient) Request() (err error) {
 	response, err := cls.request(cls.URL, nil)
 	if err != nil {
-		return exception.HTTPHtmlException(err)
+		return DownloadJsonErr(err)
 	}
 
 	var data struct {
@@ -48,17 +46,16 @@ func (cls *BILIBILIClient) Request() (err error) {
 			} `json:"pages"`
 		} `json:"videoData"`
 	}
-
 	err = response.ReByJson(`__INITIAL_STATE__=(.*);\(function\(\)`, &data)
 	if err != nil {
 		return
 	}
 
-	var x selector.Selector
+	var selector Selector
 	var page, part string
 	var cid, duration, width, height int
-	x = []byte(cls.URL)
-	err = x.Re(cls.Meta().Expression+`.*\?p=(?P<page>\d+)`, &page)
+	selector = []byte(cls.URL)
+	err = selector.Re(cls.Meta().Expression+`.*\?p=(?P<page>\d+)`, &page)
 	if err != nil {
 		page = "1"
 	}
@@ -92,6 +89,11 @@ func (cls *BILIBILIClient) Request() (err error) {
 		qualityIds = append(qualityIds, qualityId)
 	}
 
+	cls.response = &Response{
+		Title:  data.VideoData.Title,
+		Part:   part,
+		Stream: []Stream{},
+	}
 	for _, qualityID := range qualityIds {
 		response, err = cls.request("https://api.bilibili.com/x/player/playurl?", url.Values{
 			"qn":   []string{strconv.Itoa(qualityID)},
@@ -99,7 +101,7 @@ func (cls *BILIBILIClient) Request() (err error) {
 			"cid":  []string{strconv.Itoa(cid)},
 		})
 		if err != nil {
-			return exception.HTTPJsonException(err)
+			return DownloadJsonErr(err)
 		}
 
 		var json struct {
@@ -122,44 +124,38 @@ func (cls *BILIBILIClient) Request() (err error) {
 		}
 		err = response.Json(&json)
 		if err != nil {
-			return exception.JSONParseException(err)
+			return ParseJsonErr(err)
 		}
 
 		if json.Code != 0 {
-			return exception.ServerAuthException(errors.New(json.Message))
+			return ServerAuthErr(errors.New(json.Message))
 		}
 
 		var size int
-		var links []URLAttr
+		var urls []string
 		var protocol, format string
 
 		for _, video := range json.Data.Durl {
 			size += video.Size
-			links = append(links, URLAttr{
-				URL:   video.Url,
-				Order: video.Order,
-				Size:  video.Size,
-			})
+			urls = append(urls, video.Url)
 		}
 
-		if json.Data.Quality == 15 || json.Data.Quality == 16 {
+		if json.Data.Quality == 15 {
 			format = "mp4"
 		} else {
 			format = "flv"
 		}
 
-		if len(links) == 1 {
+		if len(urls) == 1 {
 			protocol = "http"
-		} else if len(links) > 1 && format == "flv" {
+		} else if len(urls) > 1 && format == "flv" {
 			protocol = "flv"
-		} else if len(links) > 1 && format == "mp4" {
+		} else if len(urls) > 1 && format == "mp4" {
 			protocol = "ism"
 		}
 
-		cls.response = append(cls.response, &Response{
+		cls.response.Stream = append(cls.response.Stream, Stream{
 			ID:               json.Data.Quality,
-			Title:            data.VideoData.Title,
-			Part:             part,
 			Format:           format,
 			Size:             size,
 			Duration:         duration,
@@ -167,23 +163,23 @@ func (cls *BILIBILIClient) Request() (err error) {
 			Height:           height,
 			StreamType:       json.Data.Format,
 			Quality:          qualityIDByString[json.Data.Quality],
-			Links:            links,
+			URLS:             urls,
 			DownloadProtocol: protocol,
 			DownloadHeaders:  http.Header{"Referer": []string{cls.URL}, "User-Agent": []string{UserAgent}},
 		})
 	}
 
-	key := make(map[int]*Response)
-	for _, response := range cls.response {
-		key[response.ID] = response
+	key := make(map[int]Stream)
+	for _, stream := range cls.response.Stream {
+		key[stream.ID] = stream
 	}
 
-	var Response []*Response
-	for _, response := range key {
-		Response = append(Response, response)
+	var stream []Stream
+	for _, k := range key {
+		stream = append(stream, k)
 	}
 
-	cls.response = Response
+	cls.response.Stream = stream
 	return
 
 }

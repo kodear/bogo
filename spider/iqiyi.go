@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/zhxingy/bogo/exception"
-	"github.com/zhxingy/bogo/selector"
 	"math/rand"
 	"net/url"
 	"strconv"
@@ -34,17 +32,17 @@ func (cls *IQIYIClient) Meta() *Meta {
 func (cls *IQIYIClient) Request() (err error) {
 	response, err := cls.request(cls.URL, nil)
 	if err != nil {
-		return exception.HTTPHtmlException(err)
+		return DownloadHtmlErr(err)
 	}
 
 	var vid, tvid, title string
 	err = response.Re(`param\['tvid'\] = \"(?P<tvid>\d+)\";\s+param\['vid'\] = "(?P<vid>[a-zA-Z\d]+)"`, &tvid, &vid)
 	if err != nil {
-		return exception.HTMLParseException(err)
+		return ParseHtmlErr(err)
 	}
 	err = response.Re(`"tvName":"(?P<title>.*)","isfeizhengpian"`, &title)
 	if err != nil {
-		return exception.HTMLParseException(err)
+		return ParseHtmlErr(err)
 	}
 
 	tm := time.Now().Unix() * 1000
@@ -72,10 +70,15 @@ func (cls *IQIYIClient) Request() (err error) {
 
 	key, err := cls.authKey(tvid, strconv.Itoa(int(tm)))
 	if err != nil {
-		return exception.AuthKeyException(err)
+		return ServerAuthKeyErr(err)
 	}
 
 	cls.Header.Add("Referer", cls.URL)
+	cls.response = &Response{
+		Title:  title,
+		Part:   "",
+		Stream: []Stream{},
+	}
 	for _, qualityID := range []int{100, 200, 300, 500, 600, 610} {
 		uri, err := cls.cmd5x("https://cache.video.iqiyi.com/dash?" + url.Values{
 			"tvid":          []string{tvid},
@@ -114,15 +117,15 @@ func (cls *IQIYIClient) Request() (err error) {
 			"bop":           []string{fmt.Sprintf(`{"version":"10.0","dfp":"{%s}"}`, dfp)},
 		}.Encode() + "&ut=1")
 		if err != nil {
-			return exception.AuthKeyException(err)
+			return ServerAuthKeyErr(err)
 		}
 
 		response, err = cls.request(uri, nil)
 		if err != nil {
-			if len(cls.response) > 0 {
+			if len(cls.response.Stream) > 0 {
 				goto End
 			}
-			return exception.HTTPJsonException(err)
+			return DownloadJsonErr(err)
 		}
 
 		var vjson struct {
@@ -161,14 +164,14 @@ func (cls *IQIYIClient) Request() (err error) {
 
 		err = response.Json(&vjson)
 		if err != nil {
-			return exception.JSONParseException(err)
+			return ParseJsonErr(err)
 		}
 
 		if vjson.Code != "A00000" || len(vjson.Data.Program.Video) == 0 {
-			if len(cls.response) > 0 {
+			if len(cls.response.Stream) > 0 {
 				goto End
 			}
-			return exception.ServerAuthException(errors.New(vjson.Data.BossTs.Msg))
+			return ServerAuthErr(errors.New(vjson.Data.BossTs.Msg))
 		}
 
 		for _, video := range vjson.Data.Program.Video {
@@ -176,9 +179,9 @@ func (cls *IQIYIClient) Request() (err error) {
 				var width, height int
 				var w, h string
 				if video.Scrsz != "" {
-					var x selector.Selector
-					x = []byte(video.Scrsz)
-					_ = x.Re(`(\d+)x(\d+)`, &w, &h)
+					var selector Selector
+					selector = []byte(video.Scrsz)
+					_ = selector.Re(`(\d+)x(\d+)`, &w, &h)
 				}
 				if w != "" && h != "" {
 					width, _ = strconv.Atoi(w)
@@ -186,17 +189,11 @@ func (cls *IQIYIClient) Request() (err error) {
 				}
 
 				var format, protocol string
-				var urlAttrs []URLAttr
+				var urls []string
 				if video.M3u8 != "" {
 					format = "ts"
 					protocol = "hls_native"
-					urlAttrs = []URLAttr{
-						{
-							URL:   video.M3u8,
-							Order: 0,
-							Size:  video.Vsize,
-						},
-					}
+					urls = []string{video.M3u8}
 				} else {
 					format = "f4v"
 					if len(video.Fs) > 1 {
@@ -210,12 +207,12 @@ func (cls *IQIYIClient) Request() (err error) {
 						z := strings.Split(strings.Split(v.L, "?")[0], "/")
 						sign, err := cls.f4v(vjson.Data.Boss.Data.T + strings.Split(z[len(z)-1], ".")[0])
 						if err != nil {
-							return exception.AuthKeyException(err)
+							return ServerAuthKeyErr(err)
 						}
 
 						response, err := cls.request(uri+"&ibt="+sign, nil)
 						if err != nil {
-							return exception.HTTPJsonException(err)
+							return DownloadJsonErr(err)
 						}
 
 						var us struct {
@@ -223,19 +220,15 @@ func (cls *IQIYIClient) Request() (err error) {
 						}
 						err = response.Json(&us)
 						if err != nil {
-							return exception.JSONParseException(err)
+							return ParseJsonErr(err)
 						}
-
-						urlAttrs = append(urlAttrs, URLAttr{
-							URL: us.L,
-						})
+						urls = append(urls, us.L)
 					}
 				}
 
-				cls.response = append(cls.response, &Response{
+				cls.response.Part = video.Name
+				cls.response.Stream = append(cls.response.Stream, Stream{
 					ID:       video.Bid,
-					Title:    title,
-					Part:     video.Name,
 					Format:   format,
 					Size:     video.Vsize,
 					Duration: video.Duration,
@@ -249,31 +242,30 @@ func (cls *IQIYIClient) Request() (err error) {
 						600: "1080P",
 						610: "1080P50",
 					}[video.Bid],
-					Links:            urlAttrs,
+					URLS:             urls,
 					DownloadProtocol: protocol,
 				})
-
 				break
 			}
 		}
 	}
 
-	if len(cls.response) < 1 {
-		return exception.OtherException(errors.New(""))
+	if len(cls.response.Stream) < 1 {
+		return UnknownErr(errors.New(""))
 	}
 
 End:
-	x := make(map[int]*Response)
-	for _, response := range cls.response {
-		x[response.ID] = response
+	x := make(map[int]Stream)
+	for _, stream := range cls.response.Stream {
+		x[stream.ID] = stream
 	}
 
-	var Response []*Response
-	for _, response := range x {
-		Response = append(Response, response)
+	var stream []Stream
+	for _, k := range x {
+		stream = append(stream, k)
 	}
 
-	cls.response = Response
+	cls.response.Stream = stream
 	return
 
 }

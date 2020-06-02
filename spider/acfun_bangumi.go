@@ -2,7 +2,6 @@ package spider
 
 import (
 	"encoding/json"
-	"github.com/zhxingy/bogo/exception"
 	"strings"
 )
 
@@ -22,7 +21,7 @@ func (cls *ACFUNBangUmiClient) Meta() *Meta {
 func (cls *ACFUNBangUmiClient) Request() (err error) {
 	selector, err := cls.request(cls.URL, nil)
 	if err != nil {
-		return exception.HTTPHtmlException(err)
+		return DownloadHtmlErr(err)
 	}
 
 	var video struct {
@@ -51,25 +50,24 @@ func (cls *ACFUNBangUmiClient) Request() (err error) {
 	}
 	err = json.Unmarshal([]byte(video.CurrentVideoInfo.KsPlayJson), &currentVideo)
 	if err != nil {
-		return exception.JSONParseException(err)
+		return ParseJsonErr(err)
 	}
 
+	cls.response = &Response{
+		Title:  strings.TrimSpace(video.Title),
+		Part:   video.Part,
+		Stream: []Stream{},
+	}
 	for index, v := range currentVideo.AdaptationSet.Representation {
-		cls.response = append(cls.response, &Response{
-			ID:     index + 1,
-			Title:  strings.TrimSpace(video.Title),
-			Part:   video.Part,
-			Format: "ts",
-			Width:  v.Width,
-			Height: v.Height,
-			Links: []URLAttr{
-				{
-					URL: v.Url,
-				},
-			},
+		cls.response.Stream = append(cls.response.Stream, Stream{
+			ID:               index + 1,
+			Format:           "ts",
 			Quality:          v.Quality,
 			Duration:         int(v.Duration),
 			DownloadProtocol: "hls",
+			Width:            v.Width,
+			Height:           v.Height,
+			URLS:             []string{v.Url},
 		})
 	}
 

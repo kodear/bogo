@@ -2,7 +2,6 @@ package spider
 
 import (
 	"errors"
-	"github.com/zhxingy/bogo/exception"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -28,7 +27,7 @@ func (cls *BILIBILIBangUmiClient) Meta() *Meta {
 func (cls *BILIBILIBangUmiClient) Request() (err error) {
 	response, err := cls.request(cls.URL, nil)
 	if err != nil {
-		return exception.HTTPHtmlException(err)
+		return DownloadHtmlErr(err)
 	}
 
 	var data struct {
@@ -81,6 +80,11 @@ func (cls *BILIBILIBangUmiClient) Request() (err error) {
 		qualityIds = append(qualityIds, qualityId)
 	}
 
+	cls.response = &Response{
+		Title:  data.MediaInfo.Title,
+		Part:   part,
+		Stream: []Stream{},
+	}
 	for _, qualityID := range qualityIds {
 		cls.Header.Add("Referer", cls.URL)
 		response, err = cls.request("https://api.bilibili.com/pgc/player/web/playurl?", url.Values{
@@ -89,7 +93,7 @@ func (cls *BILIBILIBangUmiClient) Request() (err error) {
 			"cid":  []string{strconv.Itoa(cid)},
 		})
 		if err != nil {
-			return exception.HTTPJsonException(err)
+			return ParseJsonErr(err)
 		}
 
 		var json struct {
@@ -112,64 +116,58 @@ func (cls *BILIBILIBangUmiClient) Request() (err error) {
 		}
 		err = response.Json(&json)
 		if err != nil {
-			return exception.JSONParseException(err)
+			return ParseJsonErr(err)
 		}
 		if json.Code != 0 {
-			return exception.ServerAuthException(errors.New(json.Message))
+			return ServerAuthErr(errors.New(json.Message))
 		}
 
 		var size int
-		var links []URLAttr
+		var urls []string
 		var protocol, format string
 
 		for _, video := range json.Data.Durl {
 			size += video.Size
-			links = append(links, URLAttr{
-				URL:   video.Url,
-				Order: video.Order,
-				Size:  video.Size,
-			})
+			urls = append(urls, video.Url)
 		}
 
-		if json.Data.Quality == 15 || json.Data.Quality == 16 {
+		if json.Data.Quality == 15 {
 			format = "mp4"
 		} else {
 			format = "flv"
 		}
 
-		if len(links) == 1 {
+		if len(urls) == 1 {
 			protocol = "http"
-		} else if len(links) > 1 && format == "flv" {
+		} else if len(urls) > 1 && format == "flv" {
 			protocol = "flv"
-		} else if len(links) > 1 && format == "mp4" {
+		} else if len(urls) > 1 && format == "mp4" {
 			protocol = "ism"
 		}
 
-		cls.response = append(cls.response, &Response{
+		cls.response.Stream = append(cls.response.Stream, Stream{
 			ID:               json.Data.Quality,
-			Title:            data.MediaInfo.Title,
-			Part:             part,
 			Format:           format,
 			Size:             size,
 			Duration:         json.Data.Timelength / 1000,
 			StreamType:       json.Data.Format,
 			Quality:          qualityIDByString[json.Data.Quality],
-			Links:            links,
+			URLS:             urls,
 			DownloadProtocol: protocol,
 			DownloadHeaders:  http.Header{"Referer": []string{cls.URL}, "User-Agent": []string{UserAgent}},
 		})
 	}
 
-	key := make(map[int]*Response)
-	for _, response := range cls.response {
-		key[response.ID] = response
+	key := make(map[int]Stream)
+	for _, stream := range cls.response.Stream {
+		key[stream.ID] = stream
 	}
 
-	var Response []*Response
-	for _, response := range key {
-		Response = append(Response, response)
+	var stream []Stream
+	for _, k := range key {
+		stream = append(stream, k)
 	}
 
-	cls.response = Response
+	cls.response.Stream = stream
 	return
 }

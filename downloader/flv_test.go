@@ -18,4 +18,3 @@ func TestFLVFileDownloader_Start(t *testing.T) {
 		t.Error(err)
 	}
 }
-

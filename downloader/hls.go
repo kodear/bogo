@@ -20,7 +20,7 @@ func (cls *HLSFileDownloader) start() {
 	reader, err := cls.open()
 	if err != nil {
 		cls.DownloadStatus.Msg = err
-	}else{
+	} else {
 		cls.run(reader)
 	}
 }
@@ -79,13 +79,13 @@ func (cls *HLSFileDownloader) parse(reader io.Reader) (playlist *m3u8.MediaPlayl
 	return
 }
 
-func (cls *HLSFileDownloader) open()(io.Reader, error){
+func (cls *HLSFileDownloader) open() (io.Reader, error) {
 	res, err := cls.request(cls.URL)
 	if err != nil {
 		return nil, err
 	}
 
-	return  res.Body, nil
+	return res.Body, nil
 }
 
 func (cls *HLSFileDownloader) run(reader io.Reader) {

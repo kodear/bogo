@@ -17,7 +17,7 @@ func (cls *HLSNativeFileDownloader) start() {
 	reader, err := cls.open()
 	if err != nil {
 		cls.DownloadStatus.Msg = err
-	}else{
+	} else {
 		cls.run(reader)
 	}
 }
@@ -26,6 +26,6 @@ func (cls *HLSNativeFileDownloader) Start() {
 	go cls.start()
 }
 
-func (cls *HLSNativeFileDownloader) open()(io.Reader, error)  {
+func (cls *HLSNativeFileDownloader) open() (io.Reader, error) {
 	return strings.NewReader(cls.URL), nil
 }

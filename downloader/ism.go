@@ -64,10 +64,10 @@ func (cls *ISMFileDownloader) Start() {
 
 func (cls *ISMFileDownloader) join(file string) (err error) {
 	path, err := exec.LookPath("ffmpeg")
-	if err != nil{
+	if err != nil {
 		return err
 	}
-	if !pathExists(cls.File){
+	if !pathExists(cls.File) {
 		err = os.Rename(file, cls.File)
 		return
 	}
@@ -84,7 +84,7 @@ func (cls *ISMFileDownloader) join(file string) (err error) {
 	var stderr bytes.Buffer
 	err = cmd.Run()
 	cmd.Stderr = &stderr
-	if err != nil{
+	if err != nil {
 		return fmt.Errorf("%s %s", err, stderr.String())
 	}
 
@@ -93,7 +93,7 @@ func (cls *ISMFileDownloader) join(file string) (err error) {
 	_ = os.Remove(file)
 	_ = os.Remove(cls.File)
 	err = os.Rename(outFile, cls.File)
-	if err != nil{
+	if err != nil {
 		return
 	}
 

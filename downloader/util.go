@@ -26,7 +26,7 @@ func PKCS7UnPadding(origData []byte) []byte {
 	return origData[:length-unpadding]
 }
 
-func getTestPath()string{
+func getTestPath() string {
 	home := os.Getenv("BOGO")
 	return filepath.Join(home[1:len(home)-1], "test")
 }

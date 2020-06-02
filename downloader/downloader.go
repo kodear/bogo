@@ -22,18 +22,17 @@ var downloader = []Downloader{
 	&HLSNativeFileDownloader{},
 }
 
-func NewDownloader(protocol string) (cls Downloader, err error){
-	for _, ie := range downloader{
-		if ie.Meta().Name == protocol{
+func NewDownloader(protocol string) (cls Downloader, err error) {
+	for _, ie := range downloader {
+		if ie.Meta().Name == protocol {
 			cls = ie
 			break
 		}
 	}
 
-	if cls == nil{
-		err = errors.New("did not match to the downloader: "  + protocol)
+	if cls == nil {
+		err = errors.New("did not match to the downloader: " + protocol)
 	}
 
 	return cls, err
 }
-

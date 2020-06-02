@@ -43,4 +43,3 @@ func (cls *HTTPFileDownloader) start() {
 func (cls *HTTPFileDownloader) Start() {
 	go cls.start()
 }
-

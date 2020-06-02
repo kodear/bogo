@@ -9,7 +9,7 @@ import (
 
 func TestSyncDownloader(t *testing.T) {
 	downloader, err := NewDownloader("http")
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 
@@ -18,14 +18,14 @@ func TestSyncDownloader(t *testing.T) {
 	}, http.Header{})
 	downloader.Start()
 	err = downloader.Wait()
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 }
 
 func TestAsyncDownloader(t *testing.T) {
 	downloader, err := NewDownloader("http")
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 
@@ -37,13 +37,12 @@ func TestAsyncDownloader(t *testing.T) {
 	for {
 		if _, ok := <-downloader.Status().ch; !ok {
 			break
-		}else{
+		} else {
 			fmt.Printf("%d/%d\n", downloader.Status().Byte, downloader.Status().MaxLength)
 		}
 	}
 
-
-	if downloader.Status().Msg != nil{
+	if downloader.Status().Msg != nil {
 		t.Error(err)
 	}
 }

@@ -3208,7 +3208,7 @@ https://meiju11.qfxmj.com/20200514/F1kJTMiM/2000kb/hls/a5fVrL6b.js
 
 func TestHLSNativeFileDownloader_Start(t *testing.T) {
 	test := HLSNativeFileDownloader{}
-	test.Initialize(filepath.Join(getTestPath(), "test_download_hls_native.ts"), []string{hlsNativeTestText,}, http.Header{})
+	test.Initialize(filepath.Join(getTestPath(), "test_download_hls_native.ts"), []string{hlsNativeTestText}, http.Header{})
 	test.Start()
 	err := test.Wait()
 	if err != nil {

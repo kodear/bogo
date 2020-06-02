@@ -58,11 +58,7 @@ func (cls *FileDownloader) Wait() (err error) {
 		}
 	}
 
-	if cls.DownloadStatus.Msg != nil {
-		return cls.DownloadStatus.Msg
-	}
-
-	return
+	return cls.DownloadStatus.Msg
 }
 
 func (cls *FileDownloader) request(uri string) (res *http.Response, err error) {

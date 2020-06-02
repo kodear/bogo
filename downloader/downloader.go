@@ -1,10 +1,39 @@
 package downloader
 
+import (
+	"errors"
+	"net/http"
+)
+
 type Downloader interface {
-	start()
-	Wait()
+	Start()
+	Status() DownloadStatus
+	Wait() error
+	Meta() *Meta
+	Initialize(string, []string, http.Header)
 }
 
-func Start(downloader Downloader) {
-	go downloader.start()
+var downloader = []Downloader{
+	&HTTPFileDownloader{},
+	&FLVFileDownloader{},
+	&F4VFileDownloader{},
+	&ISMFileDownloader{},
+	&HLSFileDownloader{},
+	&HLSNativeFileDownloader{},
 }
+
+func NewDownloader(protocol string) (cls Downloader, err error){
+	for _, ie := range downloader{
+		if ie.Meta().Name == protocol{
+			cls = ie
+			break
+		}
+	}
+
+	if cls == nil{
+		err = errors.New("did not match to the downloader: "  + protocol)
+	}
+
+	return cls, err
+}
+

@@ -6,7 +6,8 @@ import (
 
 func TestACFUNClient_Request(t *testing.T) {
 	test := ACFUNClient{}
-	test.Initialization("https://www.acfun.cn/v/ac15533372", nil, nil)
+	test.SetURL("https://www.acfun.cn/v/ac15533372")
+	test.Initialization(nil, nil)
 	err := test.Request()
 	if err != nil {
 		t.Error(err)

@@ -7,13 +7,21 @@ import (
 )
 
 func main() {
-
-	response, err := spider.Do("http://www.bilibili.com/index.mp4/1", nil)
+	// // get the extractor object
+	cls, err := spider.NewSpider("https://www.acfun.cn/v/ac15918856")
 	if err != nil {
 		panic(err)
 	}
 
-	body, _ := json.MarshalIndent(response, "", "\t")
-	fmt.Println(string(body))
+	// initialize extractor
+	cls.Initialization(nil, nil)
+	err = cls.Request()
 
+	// if the msg is not nil, the extraction of failure.
+	if err != nil {
+		panic(err)
+	}
+
+	body, _ := json.MarshalIndent(cls.Response(), "", "  ")
+	fmt.Println(string(body))
 }

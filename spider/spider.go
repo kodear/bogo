@@ -8,7 +8,8 @@ import (
 type Spider interface {
 	Request() error
 	Response() *Response
-	Initialization(uri string, jar CookiesJar, header http.Header)
+	Initialization(jar CookiesJar, header http.Header)
+	SetURL(string)
 	Meta() *Meta
 }
 
@@ -26,24 +27,18 @@ var Spiders = []Spider{
 	&HTTPClient{},
 }
 
-func Do(uri string, jar []*http.Cookie, header http.Header) (*Response, error) {
-	var ie Spider
+func NewSpider(url string) (cls Spider, err error) {
 	for _, spider := range Spiders {
-		if match(uri, spider.Meta().Expression) {
-			ie = spider
+		if match(url, spider.Meta().Expression) {
+			cls = spider
+			cls.SetURL(url)
 			break
 		}
 	}
 
-	if ie == nil {
+	if cls == nil {
 		return nil, errors.New("not matched to extractor")
 	}
 
-	ie.Initialization(uri, jar, header)
-	err := ie.Request()
-	if err != nil {
-		return nil, err
-	}
-
-	return ie.Response(), nil
+	return
 }

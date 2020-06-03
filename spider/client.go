@@ -116,13 +116,16 @@ func (cls *Client) Response() *Response {
 
 }
 
-func (cls *Client) Initialization(uri string, jar CookiesJar, header http.Header) {
+func (cls *Client) Initialization(jar CookiesJar, header http.Header) {
 	if header == nil {
 		header = http.Header{}
 	}
 	cls.Header = header
 	cls.CookieJar = jar
-	cls.URL = uri
+}
+
+func (cls *Client) SetURL(url string) {
+	cls.URL = url
 }
 
 type Cookie struct {

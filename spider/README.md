@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	// // get the extractor object
+	// get the extractor object
 	cls, err := spider.NewSpider("https://www.acfun.cn/v/ac15918856")
 	if err != nil {
 		panic(err)

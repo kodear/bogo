@@ -90,8 +90,7 @@ func (cls *QQClient) Request() (err error) {
 
 	cls.CookieJar = nil
 	cls.response = &Response{
-		Title:  "",
-		Part:   "",
+		Site:   cls.Meta().Name,
 		Stream: []Stream{},
 	}
 	for _, quality := range []string{"sd", "hd", "shd", "fhd"} {
@@ -219,11 +218,11 @@ func (cls *QQClient) Request() (err error) {
 		}
 
 		cls.response.Title = video.Vl.Vi[0].Ti
+		cls.response.Duration = int(duration)
 		cls.response.Stream = append(cls.response.Stream, Stream{
 			ID:               id,
 			Format:           format,
 			Size:             video.Vl.Vi[0].Fs,
-			Duration:         int(duration),
 			Width:            video.Vl.Vi[0].Vw,
 			Height:           video.Vl.Vi[0].Vh,
 			StreamType:       streamType,

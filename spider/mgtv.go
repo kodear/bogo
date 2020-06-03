@@ -113,6 +113,7 @@ func (cls *MGTVClient) Request() (err error) {
 	cls.response = &Response{
 		Title:  auth.Data.Info.Title,
 		Part:   auth.Data.Info.Series,
+		Site:   cls.Meta().Name,
 		Stream: []Stream{},
 	}
 	for _, stream := range json.Data.Stream {
@@ -138,10 +139,10 @@ func (cls *MGTVClient) Request() (err error) {
 
 		id, _ := strconv.Atoi(stream.Def)
 		duration, _ := strconv.Atoi(auth.Data.Info.Duration)
+		cls.response.Duration = duration
 		cls.response.Stream = append(cls.response.Stream, Stream{
 			ID:               id,
 			Format:           "ts",
-			Duration:         duration,
 			StreamType:       stream.FileFormat,
 			Quality:          QualityIDByString[id],
 			URLS:             []string{video.Info},

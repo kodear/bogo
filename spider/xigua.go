@@ -52,12 +52,14 @@ func (cls *XIGUAClient) Request() (err error) {
 	cls.response = &Response{
 		Title:  json.AlbumInfo.Title,
 		Part:   strconv.Itoa(json.AlbumInfo.LatestSeq),
+		Site:   cls.Meta().Name,
 		Stream: []Stream{},
 	}
 	for _, video := range json.VideoResource.Normal.VideoList {
 		index += 1
 		duration, _ := strconv.Atoi(json.AlbumInfo.Duration)
 		decodeBytes, _ := base64.StdEncoding.DecodeString(video.URL)
+		cls.response.Duration = duration
 		cls.response.Stream = append(cls.response.Stream, Stream{
 			ID:               index,
 			Format:           video.Vtype,
@@ -67,7 +69,6 @@ func (cls *XIGUAClient) Request() (err error) {
 			StreamType:       video.Vtype,
 			URLS:             []string{string(decodeBytes)},
 			Quality:          video.Definition,
-			Duration:         duration,
 			DownloadProtocol: "http",
 		})
 	}

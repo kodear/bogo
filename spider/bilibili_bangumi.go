@@ -83,6 +83,7 @@ func (cls *BILIBILIBangUmiClient) Request() (err error) {
 	cls.response = &Response{
 		Title:  data.MediaInfo.Title,
 		Part:   part,
+		Site:   cls.Meta().Name,
 		Stream: []Stream{},
 	}
 	for _, qualityID := range qualityIds {
@@ -145,11 +146,11 @@ func (cls *BILIBILIBangUmiClient) Request() (err error) {
 			protocol = "ism"
 		}
 
+		cls.response.Duration = json.Data.Timelength / 1000
 		cls.response.Stream = append(cls.response.Stream, Stream{
 			ID:               json.Data.Quality,
 			Format:           format,
 			Size:             size,
-			Duration:         json.Data.Timelength / 1000,
 			StreamType:       json.Data.Format,
 			Quality:          qualityIDByString[json.Data.Quality],
 			URLS:             urls,

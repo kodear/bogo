@@ -76,7 +76,7 @@ func (cls *IQIYIClient) Request() (err error) {
 	cls.Header.Add("Referer", cls.URL)
 	cls.response = &Response{
 		Title:  title,
-		Part:   "",
+		Site:   cls.Meta().Name,
 		Stream: []Stream{},
 	}
 	for _, qualityID := range []int{100, 200, 300, 500, 600, 610} {
@@ -226,14 +226,14 @@ func (cls *IQIYIClient) Request() (err error) {
 					}
 				}
 
+				cls.response.Duration = video.Duration
 				cls.response.Part = video.Name
 				cls.response.Stream = append(cls.response.Stream, Stream{
-					ID:       video.Bid,
-					Format:   format,
-					Size:     video.Vsize,
-					Duration: video.Duration,
-					Width:    width,
-					Height:   height,
+					ID:     video.Bid,
+					Format: format,
+					Size:   video.Vsize,
+					Width:  width,
+					Height: height,
 					Quality: map[int]string{
 						100: "auto",
 						200: "270P",

@@ -13,7 +13,6 @@ type Stream struct {
 	ID               int    //视频ID
 	Format           string //视频格式
 	Size             int    //视频大小
-	Duration         int    //视频长度
 	Width            int    //视频宽
 	Height           int    //视频高
 	StreamType       string //视频类型
@@ -24,9 +23,11 @@ type Stream struct {
 }
 
 type Response struct {
-	Title  string //视频名称
-	Part   string //视频集数
-	Stream []Stream
+	Title    string //视频名称
+	Part     string //视频集数
+	Duration int    //视频时长
+	Site     string
+	Stream   []Stream
 }
 
 type Client struct {

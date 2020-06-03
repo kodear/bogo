@@ -79,6 +79,7 @@ func (cls *YOUKUClient) Request() (err error) {
 	cls.response = &Response{
 		Title:  json.Data.Show.Title,
 		Part:   strconv.Itoa(json.Data.Show.Stage),
+		Site:   cls.Meta().Name,
 		Stream: []Stream{},
 	}
 	for id, stream := range json.Data.Stream {
@@ -99,11 +100,11 @@ func (cls *YOUKUClient) Request() (err error) {
 			}
 		}
 
+		cls.response.Duration = stream.StreamExt.Duration / 1000
 		cls.response.Stream = append(cls.response.Stream, Stream{
 			ID:               id + 1,
 			Format:           "ts",
 			Size:             stream.StreamExt.Size,
-			Duration:         stream.StreamExt.Duration / 1000,
 			Width:            stream.Width,
 			Height:           stream.Height,
 			StreamType:       stream.StreamType,

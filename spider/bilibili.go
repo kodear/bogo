@@ -90,9 +90,11 @@ func (cls *BILIBILIClient) Request() (err error) {
 	}
 
 	cls.response = &Response{
-		Title:  data.VideoData.Title,
-		Part:   part,
-		Stream: []Stream{},
+		Title:    data.VideoData.Title,
+		Part:     part,
+		Site:     cls.Meta().Name,
+		Duration: duration,
+		Stream:   []Stream{},
 	}
 	for _, qualityID := range qualityIds {
 		response, err = cls.request("https://api.bilibili.com/x/player/playurl?", url.Values{
@@ -158,7 +160,6 @@ func (cls *BILIBILIClient) Request() (err error) {
 			ID:               json.Data.Quality,
 			Format:           format,
 			Size:             size,
-			Duration:         duration,
 			Width:            width,
 			Height:           height,
 			StreamType:       json.Data.Format,

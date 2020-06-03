@@ -46,6 +46,7 @@ func (cls *RIJUTVClient) Request() (err error) {
 	cls.response = &Response{
 		Title: title,
 		Part:  part,
+		Site:  cls.Meta().Name,
 		Stream: []Stream{
 			{
 				ID:               1,

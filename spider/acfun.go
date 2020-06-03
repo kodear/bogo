@@ -61,14 +61,15 @@ func (cls *ACFUNClient) Request() (err error) {
 	cls.response = &Response{
 		Title:  strings.TrimSpace(video.Title),
 		Part:   video.CurrentVideoInfo.Part,
+		Site:   cls.Meta().Name,
 		Stream: []Stream{},
 	}
 	for index, v := range currentVideo.AdaptationSet.Representation {
+		cls.response.Duration = int(v.Duration)
 		cls.response.Stream = append(cls.response.Stream, Stream{
 			ID:               index + 1,
 			Format:           "ts",
 			Quality:          v.Quality,
-			Duration:         int(v.Duration),
 			DownloadProtocol: "hls",
 			Width:            v.Width,
 			Height:           v.Height,

@@ -28,7 +28,12 @@ func PKCS7UnPadding(origData []byte) []byte {
 
 func getTestPath() string {
 	home := os.Getenv("BOGO")
-	return filepath.Join(home[1:len(home)-1], "test")
+	path := filepath.Join(home[1:len(home)-1], "test")
+	if !pathExists(path) {
+		_ = os.Mkdir(path, 0666)
+	}
+
+	return path
 }
 
 func pathExists(path string) bool {

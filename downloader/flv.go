@@ -25,6 +25,7 @@ func (cls *FLVFileDownloader) start() {
 		}
 		cls.DownloadStatus.MaxLength += cls.length(res)
 	}
+	cls.DownloadStatus.OK = true
 
 	flvFile, err := flv.CreateFile(cls.File)
 	if err != nil {

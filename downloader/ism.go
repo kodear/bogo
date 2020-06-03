@@ -27,6 +27,7 @@ func (cls *ISMFileDownloader) start() {
 		}
 		cls.DownloadStatus.MaxLength += cls.length(res)
 	}
+	cls.DownloadStatus.OK = true
 
 	temporaryFile := cls.File + ".temporary"
 	for _, url := range cls.URLS {

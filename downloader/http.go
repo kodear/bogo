@@ -30,6 +30,7 @@ func (cls *HTTPFileDownloader) start() {
 
 	// 获取视频大小
 	cls.DownloadStatus.MaxLength = cls.length(res)
+	cls.DownloadStatus.OK = true
 
 	// 开始下载
 	err = cls.download(res, file)

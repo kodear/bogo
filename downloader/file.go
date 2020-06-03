@@ -16,6 +16,7 @@ type DownloadStatus struct {
 	MaxLength int
 	Byte      int
 	CH        chan int
+	OK        bool
 }
 
 type Meta struct {

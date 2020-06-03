@@ -15,7 +15,7 @@ type DownloadStatus struct {
 	Length    int
 	MaxLength int
 	Byte      int
-	ch        chan int
+	CH        chan int
 }
 
 type Meta struct {
@@ -39,7 +39,7 @@ func (cls *FileDownloader) Initialize(filename string, urls []string, header htt
 		Code:   0,
 		Msg:    nil,
 		Length: 0,
-		ch:     make(chan int, 1000),
+		CH:     make(chan int, 1000),
 	}
 }
 
@@ -53,7 +53,7 @@ func (cls *FileDownloader) Status() DownloadStatus {
 
 func (cls *FileDownloader) Wait() (err error) {
 	for {
-		if _, ok := <-cls.DownloadStatus.ch; !ok {
+		if _, ok := <-cls.DownloadStatus.CH; !ok {
 			break
 		}
 	}
@@ -101,7 +101,7 @@ func (cls *FileDownloader) download(res *http.Response, file *os.File) (err erro
 			return err
 		}
 		cls.DownloadStatus.Byte += n
-		cls.DownloadStatus.ch <- n
+		cls.DownloadStatus.CH <- n
 	}
 	return
 }

@@ -14,7 +14,7 @@ func (cls *FLVFileDownloader) Meta() *Meta {
 }
 
 func (cls *FLVFileDownloader) start() {
-	defer close(cls.DownloadStatus.ch)
+	defer close(cls.DownloadStatus.CH)
 
 	// 获取视频大小
 	for _, url := range cls.URLS {

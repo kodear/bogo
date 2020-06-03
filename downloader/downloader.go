@@ -10,7 +10,7 @@ type Downloader interface {
 	Status() DownloadStatus
 	Wait() error
 	Meta() *Meta
-	Initialize(string, []string, http.Header)
+	Initialize(filename string, urls []string, header http.Header)
 }
 
 var downloader = []Downloader{

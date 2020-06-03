@@ -13,7 +13,7 @@ func (cls *HTTPFileDownloader) Meta() *Meta {
 }
 
 func (cls *HTTPFileDownloader) start() {
-	defer close(cls.DownloadStatus.ch)
+	defer close(cls.DownloadStatus.CH)
 
 	file, err := os.Create(cls.File)
 	if err != nil {

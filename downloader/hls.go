@@ -49,7 +49,7 @@ func (cls *HLSFileDownloader) download(res *http.Response, file *os.File, key []
 	}
 
 	cls.DownloadStatus.Byte += n
-	cls.DownloadStatus.ch <- 1
+	cls.DownloadStatus.CH <- 1
 
 	return
 }
@@ -89,7 +89,7 @@ func (cls *HLSFileDownloader) open() (io.Reader, error) {
 }
 
 func (cls *HLSFileDownloader) run(reader io.Reader) {
-	defer close(cls.DownloadStatus.ch)
+	defer close(cls.DownloadStatus.CH)
 
 	file, err := os.Create(cls.File)
 	if err != nil {
@@ -104,7 +104,12 @@ func (cls *HLSFileDownloader) run(reader io.Reader) {
 		return
 	}
 
-	cls.DownloadStatus.MaxLength = len(playlist.Segments)
+	for _, segment := range playlist.Segments {
+		if segment == nil {
+			continue
+		}
+		cls.DownloadStatus.MaxLength += 1
+	}
 
 	var key []byte
 	if playlist.Key != nil {

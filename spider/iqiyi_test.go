@@ -6,7 +6,7 @@ import (
 
 func TestIQIYIClient_Request(t *testing.T) {
 	test := IQIYIClient{}
-	test.Initialization("https://www.iqiyi.com/v_19ry0kjwis.html", nil)
+	test.Initialization("https://www.iqiyi.com/v_19ry0kjwis.html", nil, nil)
 	err := test.Request()
 	if err != nil {
 		t.Error(err)

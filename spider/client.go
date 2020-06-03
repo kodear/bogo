@@ -116,8 +116,11 @@ func (cls *Client) Response() *Response {
 
 }
 
-func (cls *Client) Initialization(uri string, jar CookiesJar) {
-	cls.Header = http.Header{}
+func (cls *Client) Initialization(uri string, jar CookiesJar, header http.Header) {
+	if header == nil {
+		header = http.Header{}
+	}
+	cls.Header = header
 	cls.CookieJar = jar
 	cls.URL = uri
 }

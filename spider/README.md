@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	response, err := spider.Do("https://www.acfun.cn/v/ac15533372", nil)
+	response, err := spider.Do("https://www.acfun.cn/v/ac15533372", nil, nil)
 	if err != nil{
 		panic(err)
 	}

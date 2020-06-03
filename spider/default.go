@@ -18,9 +18,11 @@ func (cls *HLSClient) Request() (err error) {
 		Title: md5x(cls.URL),
 		Stream: []Stream{
 			{
-				ID:     1,
-				URLS:   []string{cls.URL},
-				Format: "ts",
+				ID:               1,
+				URLS:             []string{cls.URL},
+				Format:           "ts",
+				DownloadProtocol: "hls",
+				DownloadHeaders:  cls.Header,
 			},
 		},
 	}
@@ -54,9 +56,11 @@ func (cls *HTTPClient) Request() (err error) {
 		Title: md5x(cls.URL),
 		Stream: []Stream{
 			{
-				ID:     1,
-				URLS:   []string{cls.URL},
-				Format: format,
+				ID:               1,
+				URLS:             []string{cls.URL},
+				Format:           format,
+				DownloadProtocol: "http",
+				DownloadHeaders:  cls.Header,
 			},
 		},
 	}

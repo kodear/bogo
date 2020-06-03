@@ -2,14 +2,13 @@ package spider
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 )
 
 type Spider interface {
 	Request() error
 	Response() *Response
-	Initialization(uri string, jar CookiesJar)
+	Initialization(uri string, jar CookiesJar, header http.Header)
 	Meta() *Meta
 }
 
@@ -27,10 +26,9 @@ var Spiders = []Spider{
 	&HTTPClient{},
 }
 
-func Do(uri string, jar []*http.Cookie) (*Response, error) {
+func Do(uri string, jar []*http.Cookie, header http.Header) (*Response, error) {
 	var ie Spider
 	for _, spider := range Spiders {
-		fmt.Println(spider.Meta().Name)
 		if match(uri, spider.Meta().Expression) {
 			ie = spider
 			break
@@ -41,7 +39,7 @@ func Do(uri string, jar []*http.Cookie) (*Response, error) {
 		return nil, errors.New("not matched to extractor")
 	}
 
-	ie.Initialization(uri, jar)
+	ie.Initialization(uri, jar, header)
 	err := ie.Request()
 	if err != nil {
 		return nil, err

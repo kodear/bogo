@@ -6,7 +6,7 @@ import (
 
 func TestRIJUTVClient_Request(t *testing.T) {
 	test := RIJUTVClient{}
-	test.Initialization("https://www.rijutv.com/player/99347.html", nil)
+	test.Initialization("https://www.rijutv.com/player/99347.html", nil, nil)
 	err := test.Request()
 	if err != nil {
 		t.Error(err)

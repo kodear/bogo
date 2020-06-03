@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/zhxingy/bogo/spider"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -104,4 +105,15 @@ func (stream streams) Less(i, j int) bool {
 
 func (stream streams) Swap(i, j int) {
 	stream[i], stream[j] = stream[j], stream[i]
+}
+
+func pathExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsExist(err) {
+			return true, nil
+		}
+		return false, err
+	}
+	return true, nil
 }

@@ -58,7 +58,8 @@ func (cfg *MainConfig) Write() {
 		panic(fmt.Sprintf("parse config json failure. err msg: %v\n", err))
 	}
 
-	_, err = cfg.File.Seek(0, 0)
+	err = cfg.File.Truncate(0)
+	_, err = cfg.File.Seek(0,0)
 	_, err = cfg.File.Write(body)
 	if err != nil {
 		panic(fmt.Sprintf("write config file failure. err msg: %v\n", err))
@@ -80,7 +81,10 @@ func DefaultDownloadPath() string {
 		panic(fmt.Sprintf("get download path failure. err msg: %v\n", err))
 	}
 
-	return filepath.Join(user.HomeDir, "BogoDownload")
+	path := filepath.Join(user.HomeDir, "BogoDownload")
+	_ = os.MkdirAll(path, 0666)
+
+	return path
 }
 
 func init() {

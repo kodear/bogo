@@ -116,7 +116,7 @@ func Download(filename, path string, id, quality int, response *spider.Response)
 		n, ok := <-ie.Status().CH
 		if !ok {
 			break
-		}else{
+		} else {
 			hlsDownloadChunk += 1
 			bar.Add(n)
 		}

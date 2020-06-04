@@ -59,7 +59,7 @@ func (cfg *MainConfig) Write() {
 	}
 
 	err = cfg.File.Truncate(0)
-	_, err = cfg.File.Seek(0,0)
+	_, err = cfg.File.Seek(0, 0)
 	_, err = cfg.File.Write(body)
 	if err != nil {
 		panic(fmt.Sprintf("write config file failure. err msg: %v\n", err))

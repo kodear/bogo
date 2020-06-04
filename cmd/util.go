@@ -82,10 +82,10 @@ func formatTimeString2(timestamp int) string {
 	if len(hoursString) < 2 {
 		hoursString = "0" + hoursString
 	}
-	if len(minutesString) < 2{
+	if len(minutesString) < 2 {
 		minutesString = "0" + minutesString
 	}
-	if len(secondsString) < 2{
+	if len(secondsString) < 2 {
 		secondsString = "0" + secondsString
 	}
 

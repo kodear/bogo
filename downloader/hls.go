@@ -133,7 +133,7 @@ func (cls *HLSFileDownloader) run(reader io.Reader) {
 
 		var res *http.Response
 		res, err = cls.request(urlJoin(cls.URL, segment.URI))
-		if err != nil{
+		if err != nil {
 			cls.DownloadStatus.Msg = err
 			return
 		}

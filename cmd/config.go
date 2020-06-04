@@ -5,14 +5,14 @@ import (
 	"github.com/zhxingy/bogo/cookie"
 )
 
-func ImportCookie (file string)(err error){
+func ImportCookie(file string) (err error) {
 	ok, err := pathExists(file)
-	if !ok{
+	if !ok {
 		return
 	}
 
 	jar, err := cookie.Export(file)
-	if err != nil{
+	if err != nil {
 		return
 	}
 
@@ -23,7 +23,7 @@ func ImportCookie (file string)(err error){
 	return nil
 }
 
-func SetDownloadPath(path string){
+func SetDownloadPath(path string) {
 	cfg := config.Open("")
 	cfg.Config.DownloadPath = path
 	cfg.Write()

@@ -3,7 +3,6 @@ package cookie
 import (
 	"github.com/zhxingy/bogo/spider"
 	"net/http"
-	"strings"
 )
 
 type Dumper interface {
@@ -34,7 +33,7 @@ func Export(file string) (CookiesJar, error) {
 	for id, hosts := range hostNames {
 		for _, host := range hosts {
 			for _, cookie := range cookies {
-				if strings.Contains(cookie.Domain, host) {
+				if cookie.Domain == host {
 					if len(cookiesJar[id]) == 0 {
 						cookiesJar[id] = []*http.Cookie{cookie}
 					} else {

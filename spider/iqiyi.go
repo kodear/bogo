@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -72,6 +73,8 @@ func (cls *IQIYIClient) Request() (err error) {
 	if err != nil {
 		return ServerAuthKeyErr(err)
 	}
+	qc005 := cls.CookieJar.Name("QC005")
+	pck := cls.CookieJar.Name("P00001")
 
 	cls.Header.Add("Referer", cls.URL)
 	cls.response = &Response{
@@ -79,6 +82,8 @@ func (cls *IQIYIClient) Request() (err error) {
 		Site:   cls.Meta().Name,
 		Stream: []Stream{},
 	}
+	cls.CookieJar = nil
+	cls.Header = http.Header{}
 	for _, qualityID := range []int{100, 200, 300, 500, 600, 610} {
 		uri, err := cls.cmd5x("https://cache.video.iqiyi.com/dash?" + url.Values{
 			"tvid":          []string{tvid},
@@ -90,7 +95,7 @@ func (cls *IQIYIClient) Request() (err error) {
 			"uid":           []string{uid},
 			"ori":           []string{"pcw"},
 			"ps":            []string{"0"},
-			"k_uid":         []string{cls.CookieJar.Name("QC005")},
+			"k_uid":         []string{qc005},
 			"pt":            []string{"0"},
 			"d":             []string{"0"},
 			"s":             []string{""},
@@ -104,7 +109,7 @@ func (cls *IQIYIClient) Request() (err error) {
 			"dfp":           []string{dfp},
 			"locale":        []string{"zh_cn"},
 			"prio":          []string{`{"ff":"f4v","code":2}`},
-			"pck":           []string{cls.CookieJar.Name("P00001")},
+			"pck":           []string{pck},
 			"k_err_retries": []string{"0"},
 			"up":            []string{""},
 			"qd_v":          []string{"2"},

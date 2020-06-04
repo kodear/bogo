@@ -10,7 +10,7 @@ func PrintMedia(response *spider.Response) {
 	out = "Site:  " + response.Site + "\n"
 	out += "Title:  " + formatTitle(response.Title, response.Part) + "\n"
 	if response.Duration != 0 {
-		out += "Duration:  " + formatTimeString(response.Duration) + "\n"
+		out += "Duration:  " + formatTimeString2(response.Duration) + "\n"
 	}
 	out += "Streams:  # All available quality"
 	out = formatString(out, ":")

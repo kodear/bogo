@@ -86,6 +86,7 @@ func (cls *BILIBILIBangUmiClient) Request() (err error) {
 		Site:   cls.Meta().Name,
 		Stream: []Stream{},
 	}
+	cls.CookieJar = []*http.Cookie{{Name: "SESSDATA", Value:cls.CookieJar.Name("SESSDATA"),},}
 	for _, qualityID := range qualityIds {
 		cls.Header.Add("Referer", cls.URL)
 		response, err = cls.request("https://api.bilibili.com/pgc/player/web/playurl?", url.Values{

@@ -66,6 +66,32 @@ func formatTimeString(timestamp int) string {
 	return fmt.Sprintf("%dh%dm%ds", hours, minutes, seconds)
 }
 
+func formatTimeString2(timestamp int) string {
+	minutes := timestamp / 60
+	seconds := timestamp % 60
+	hours := minutes / 60
+	minutes = minutes % 60
+
+	if hours >= 24 {
+		return "--:--:--"
+	}
+
+	hoursString := strconv.Itoa(hours)
+	minutesString := strconv.Itoa(minutes)
+	secondsString := strconv.Itoa(seconds)
+	if len(hoursString) < 2 {
+		hoursString = "0" + hoursString
+	}
+	if len(minutesString) < 2{
+		minutesString = "0" + minutesString
+	}
+	if len(secondsString) < 2{
+		secondsString = "0" + secondsString
+	}
+
+	return fmt.Sprintf("%s:%s:%s", hoursString, minutesString, secondsString)
+}
+
 func formatSize(fileSize int64) (size string) {
 	if fileSize < 1024 {
 		return fmt.Sprintf("%.2f B", float64(fileSize)/float64(1))

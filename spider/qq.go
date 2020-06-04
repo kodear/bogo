@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -229,6 +230,7 @@ func (cls *QQClient) Request() (err error) {
 			Quality:          quality,
 			URLS:             []string{link},
 			DownloadProtocol: "hls",
+			DownloadHeaders: http.Header{"User-Agent": []string{UserAgent}, "Referer": []string{cls.URL}},
 		})
 	}
 

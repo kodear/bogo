@@ -37,6 +37,7 @@ func Download(filename, path string, id, quality int, response *spider.Response)
 				break
 			} else if extractQuality(x.Quality) > quality {
 				defaultStream = x
+
 			}
 		}
 	}
@@ -65,7 +66,7 @@ func Download(filename, path string, id, quality int, response *spider.Response)
 	out := "Site:  " + response.Site + "\n"
 	out += "Title:  " + formatTitle(response.Title, response.Part) + "\n"
 	if response.Duration != 0 {
-		out += "Duration:  " + formatTimeString(response.Duration) + "\n"
+		out += "Duration:  " + formatTimeString2(response.Duration) + "\n"
 	}
 	out += "Streams:  "
 	out = formatString(out, ":")
@@ -77,6 +78,7 @@ func Download(filename, path string, id, quality int, response *spider.Response)
 		} else if ie.Status().Msg != nil {
 			return ie.Status().Msg
 		}
+		time.Sleep(time.Millisecond * 500)
 	}
 
 	template := `{{string . "length"}} {{ bar . "<" "-" (cycle . "↖" "↗" "↘" "↙" ) "." ">"}} {{percent .}} {{string . "net_speed"}} {{string . "time"}}`
@@ -98,6 +100,9 @@ func Download(filename, path string, id, quality int, response *spider.Response)
 			bar.Set("net_speed", formatSize(int64(speed))+"/s")
 
 			if stream.DownloadProtocol == "hls" || stream.DownloadProtocol == "hls_native" {
+				if speed2 == 0 {
+					speed2 = 1
+				}
 				bar.Set("time", formatTimeString((ie.Status().MaxLength-hlsDownloadChunk)/speed2))
 				bar.Set("length", formatSize(int64(ie.Status().Byte)))
 			} else {

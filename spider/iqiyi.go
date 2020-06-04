@@ -82,9 +82,10 @@ func (cls *IQIYIClient) Request() (err error) {
 		Site:   cls.Meta().Name,
 		Stream: []Stream{},
 	}
+
 	cls.CookieJar = nil
-	cls.Header = http.Header{}
 	for _, qualityID := range []int{100, 200, 300, 500, 600, 610} {
+		cls.Header = http.Header{}
 		uri, err := cls.cmd5x("https://cache.video.iqiyi.com/dash?" + url.Values{
 			"tvid":          []string{tvid},
 			"vid":           []string{vid},

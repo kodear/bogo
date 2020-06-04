@@ -25,7 +25,7 @@ func (cls *QQClient) Meta() *Meta {
 		Cookie: Cookie{
 			Name:   "qq",
 			Enable: true,
-			Domain: []string{".v.qq.com"},
+			Domain: []string{".v.qq.com", "qq.com"},
 		},
 	}
 }
@@ -89,12 +89,13 @@ func (cls *QQClient) Request() (err error) {
 		Vinfoparam string `json:"vinfoparam"`
 	}
 
-	cls.CookieJar = nil
 	cls.response = &Response{
 		Site:   cls.Meta().Name,
 		Stream: []Stream{},
 	}
 	for _, quality := range []string{"sd", "hd", "shd", "fhd"} {
+		cls.Header = http.Header{}
+		cls.Header.Add("Referer", cls.URL)
 		body, _ := json.Marshal(postJson{
 			"onlyvinfo",
 			url.Values{

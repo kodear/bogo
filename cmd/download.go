@@ -44,7 +44,7 @@ func Download(filename, path string, id, quality int, response *spider.Response)
 
 	if stream.DownloadProtocol == "" {
 		if defaultStream.DownloadProtocol == "" {
-			stream = response.Stream[0]
+			stream = streams[0]
 		} else {
 			stream = defaultStream
 		}

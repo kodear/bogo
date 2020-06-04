@@ -3,9 +3,16 @@ package cmd
 import (
 	"fmt"
 	"github.com/zhxingy/bogo/spider"
+	"sort"
 )
 
 func PrintMedia(response *spider.Response) {
+	streams := streams{}
+	for _, stream := range (*response).Stream {
+		streams = append(streams, stream)
+	}
+	sort.Sort(streams)
+
 	var out string
 	out = "Site:  " + response.Site + "\n"
 	out += "Title:  " + formatTitle(response.Title, response.Part) + "\n"
@@ -14,7 +21,7 @@ func PrintMedia(response *spider.Response) {
 	}
 	out += "Streams:  # All available quality"
 	out = formatString(out, ":")
-	for _, stream := range response.Stream {
+	for _, stream := range streams {
 		out += formatString(sprintMediaStream(stream), ":") + "\n"
 	}
 	fmt.Printf(out)

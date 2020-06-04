@@ -126,7 +126,13 @@ func (stream streams) Len() int {
 }
 
 func (stream streams) Less(i, j int) bool {
-	return extractQuality(stream[i].Quality) > extractQuality(stream[j].Quality)
+	if extractQuality(stream[i].Quality) > extractQuality(stream[j].Quality) {
+		return true
+	} else if stream[i].Size > stream[j].Size {
+		return true
+	} else {
+		return false
+	}
 }
 
 func (stream streams) Swap(i, j int) {
@@ -142,4 +148,8 @@ func pathExists(path string) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func validCookieValueByte(b byte) bool {
+	return 0x20 <= b && b < 0x7f && b != '"' && b != ';' && b != '\\'
 }

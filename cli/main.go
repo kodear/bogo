@@ -12,7 +12,6 @@ import (
 )
 
 func main() {
-
 	app := cli.NewApp()
 	app.Name = "bogo"
 	app.Usage = "bug灰常多的媒体下载器~"
@@ -31,9 +30,6 @@ func main() {
 		Usage:       "显示版本信息",
 		DefaultText: "关闭",
 	}
-
-	//app.HideHelp = false
-	//app.UsageText = "bogo [-h|-v|-i <url> [-H <header>|-q <quality>|-f <fid>|-o <out>]|config {import-cookie <cooke_file>|set-download-path <download_path>}]"
 	app.Commands = []*cli.Command{
 		{
 			Name:     "config",
@@ -50,7 +46,6 @@ func main() {
 
 						err := cmd.ImportCookie(context.Args().First())
 						if err != nil {
-							//fmt.Printf("import cookie file failed. err msg: %v\n", err )
 							return err
 						}
 
@@ -74,10 +69,6 @@ func main() {
 				},
 			},
 		},
-		//{
-		//	Name: "help, h",
-		//	Usage:    "显示帮助信息",
-		//},
 	}
 	app.Flags = []cli.Flag{
 		&cli.StringFlag{Name: "input", Usage: "指定解析媒体地址 (支持m3u8/http媒体直链)", Aliases: []string{"i"}},
@@ -96,14 +87,12 @@ func main() {
 		headers := context.String("header")
 
 		if url == "" {
-			//fmt.Println(app.UsageText)
 			return nil
 		}
 
 		cfg := config.Open("")
 		ie, err := spider.NewSpider(url)
 		if err != nil {
-			//fmt.Println(err)
 			return err
 		}
 
@@ -125,7 +114,6 @@ func main() {
 		ie.Initialization(cfg.Config.Cookies[ie.Meta().Cookie.Name], header)
 		err = ie.Request()
 		if err != nil {
-			//fmt.Println(err)
 			return err
 		}
 
@@ -140,20 +128,16 @@ func main() {
 
 		err = cmd.Download(out, cfg.Config.DownloadPath, fid, quality, ie.Response())
 		if err != nil {
-			//fmt.Println(err)
 			return err
 		}
 
 		return nil
 	}
-
 	err := app.Run(os.Args)
 	if err != nil {
 		fmt.Println(err)
-		//os.Exit(1)
 	}
 	if len(os.Args) < 2 {
 		fmt.Println("usage: bogo -i <url> [-p|-H <header>|...]")
-		//os.Exit(2)
 	}
 }

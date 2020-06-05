@@ -24,8 +24,8 @@ bogo config set-download-path <path>
 ```
 
 ### API
-#### [提取器](spider/README.md)
-#### [下载器](downloader/README.md)
+* [提取器](spider/README.md)
+* [下载器](downloader/README.md)
 
 ### 支持网站
 * [acfun](https://www.acfun.cn/)

@@ -97,7 +97,6 @@ func (cls *BILIBILIClient) Request() (err error) {
 		Stream:   []Stream{},
 	}
 	for _, qualityID := range qualityIds {
-		cls.Header = http.Header{}
 		response, err = cls.request("https://api.bilibili.com/x/player/playurl?", url.Values{
 			"qn":   []string{strconv.Itoa(qualityID)},
 			"avid": []string{strconv.Itoa(data.Aid)},

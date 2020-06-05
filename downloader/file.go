@@ -69,7 +69,10 @@ func (cls *FileDownloader) request(uri string) (res *http.Response, err error) {
 		return
 	}
 
-	req.Header = cls.Header
+	req.Header = http.Header{}
+	for key, values := range cls.Header{
+		req.Header[key] = values
+	}
 	res, err = client.Do(req)
 	if err != nil {
 		return

@@ -53,7 +53,10 @@ func (cls *Client) request(uri string, params url.Values) (selector Selector, er
 	}
 
 	// 构造请求头
-	req.Header = cls.Header
+	req.Header = http.Header{}
+	for key, values := range cls.Header{
+		req.Header[key] = values
+	}
 	req.Header.Set("User-Agent", UserAgent)
 	// 构造cookie
 	for _, cookie := range cls.CookieJar {
@@ -83,12 +86,17 @@ func (cls *Client) fromRequest(uri string, params url.Values, data []byte) (sele
 	}
 
 	// 构造请求头
-	req.Header = cls.Header
+	req.Header = http.Header{}
+	for key, values := range cls.Header{
+		req.Header[key] = values
+	}
 	req.Header.Set("User-Agent", UserAgent)
+
 	// 构造cookie
 	for _, cookie := range cls.CookieJar {
 		req.AddCookie(cookie)
 	}
+
 	res, err := client.Do(req)
 	if err != nil {
 		return

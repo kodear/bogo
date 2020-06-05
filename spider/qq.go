@@ -77,7 +77,7 @@ func (cls *QQClient) Request() (err error) {
 		//if auth.AccessToken == "" || auth.Vusession == "" || auth.Vuserid == 0{
 		//	return exception.ServerAuthException(errors.New("qq video auth error."))
 		//}
-		if err != nil && auth.Errcode == 0 {
+		if err == nil && auth.Errcode == 0 {
 			cls.CookieJar.SetValue("vqq_vusession", auth.Vusession)
 			cls.CookieJar.SetValue("vqq_access_token", auth.AccessToken)
 			cls.CookieJar.SetValue("vqq_vuserid", strconv.Itoa(auth.Vuserid))
@@ -94,8 +94,6 @@ func (cls *QQClient) Request() (err error) {
 		Stream: []Stream{},
 	}
 	for _, quality := range []string{"sd", "hd", "shd", "fhd"} {
-		cls.Header = http.Header{}
-		cls.Header.Add("Referer", cls.URL)
 		body, _ := json.Marshal(postJson{
 			"onlyvinfo",
 			url.Values{

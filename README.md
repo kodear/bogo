@@ -6,12 +6,14 @@ cd cli
 go build -o bogo
 ```
 ### 依赖
-[FFMPEG](https://www.ffmpeg.org/)
+[FFMPEG](https://www.ffmpeg.org/)<br/>
 `备注: 非必须, 但会导致解析mp4碎片的网址下载失败`
 
 ### 使用
 * 用法
-`Usage: bogo -i <url> [options...]`
+```
+Usage: bogo -i <url> [options...]
+```
 
 * 导入浏览器cookie
 ```

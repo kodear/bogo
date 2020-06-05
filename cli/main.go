@@ -98,7 +98,7 @@ func main() {
 
 		header := http.Header{}
 		if headers != "" {
-			for _, h := range strings.Split(headers, ";") {
+			for _, h := range strings.Split(headers, "\r\n") {
 				x := strings.Split(h, "=")
 				if len(x) < 2 {
 					continue
@@ -138,6 +138,6 @@ func main() {
 		fmt.Println(err)
 	}
 	if len(os.Args) < 2 {
-		fmt.Println("usage: bogo -i <url> [-p|-H <header>|...]")
+		fmt.Println("Usage: bogo -i <url> [options...]")
 	}
 }
